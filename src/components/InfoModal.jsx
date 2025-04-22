@@ -1,4 +1,3 @@
-// src/components/InfoModal.jsx (continued)
 import { useRef, useEffect } from "react";
 import { FaTimes } from "react-icons/fa";
 import { useProductContext } from "../context/ProductContext";
@@ -24,57 +23,63 @@ const InfoModal = () => {
   if (!showInfoModal) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 bg-opacity-50 z-50">
       <div
         ref={modalRef}
-        className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4"
+        className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 h-[80vh] overflow-hidden"
       >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">How to Use</h2>
-          <button
-            onClick={toggleInfoModal}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <FaTimes />
-          </button>
-        </div>
+        {/* Close Button */}
+        <button
+          onClick={toggleInfoModal}
+          className="absolute top-3 right-4 p-2 rounded-full hover:bg-gray-100 cursor-pointer z-10"
+        >
+          <FaTimes color="#aaaaaa" />
+        </button>
 
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium mb-2">View the Product</h3>
-            <p>
-              Click and drag to rotate the 3D model. Use the scroll wheel to
-              zoom in and out.
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto h-full px-6 pt-6 pb-4 flex flex-col items-center text-center space-y-4">
+          <h2 className="text-2xl font-semibold mb-4">How to Use?</h2>
+
+          <div className="flex flex-col justify-center items-center">
+            <h3 className="font-semibold mb-2 text-lg">
+              1. Object Manipulation
+            </h3>
+            <p className="text-left">
+              <span className="font-semibold">Slide: </span>Tap and hold the
+              object, then slide your finger across the screen.
             </p>
+            <img
+              src="https://cdn.shopify.com/s/files/1/0570/3932/3314/files/Tap_and_drag_icon_d711627b-0def-469b-85b6-01bea128833c.png?v=1699207071"
+              alt="tap-hold-finger"
+              className="max-w-[80%] max-h-[80%] px-[10%] py-3"
+            />
           </div>
 
-          <div>
-            <h3 className="font-medium mb-2">Change Size</h3>
-            <p>
-              Select from the available sizes below the product visualization.
+          <div className="flex flex-col justify-center items-center">
+            <h3 className="font-semibold mb-2 text-lg">2. Object Rotation</h3>
+            <p className="text-left">
+              <span className="font-semibold">Rotate: </span>While one finger is
+              tapped on the object, use two fingers to rotate it on the screen.
             </p>
+            <img
+              src="https://cdn.shopify.com/s/files/1/0570/3932/3314/files/Tap_and_rotate_icon_7e74b253-482a-46ea-9404-77bc36f9b5ed.png?v=1699207072"
+              alt="tap-hold-rotate-finger"
+              className="max-w-[80%] max-h-[80%] px-[10%] py-3"
+            />
           </div>
 
-          <div>
-            <h3 className="font-medium mb-2">Change Color</h3>
-            <p>
-              Click on the top bar to select from available colors for the
-              current size.
+          <div className="mt-3">
+            <h3 className="font-semibold mb-2 text-lg">Side Note</h3>
+            <p className="text-left">
+              <span className="font-semibold">(a) Optimal Lighting: </span>
+              Ensure adequate lighting in the environment for optimal
+              performance.
             </p>
-          </div>
-
-          <div>
-            <h3 className="font-medium mb-2">View Dimensions</h3>
-            <p>
-              Click the ruler icon in the top right to view product dimensions.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-medium mb-2">AR View</h3>
-            <p>
-              Click "See in your space" to view the product in augmented reality
-              (if your device supports it).
+            <p className="my-3 text-left">
+              <span className="font-semibold">(b) Changing Elevation: </span>
+              When transitioning the object between different heights or
+              surfaces, continue moving the phone and the object on the screen
+              until it successfully recognizes the new height or surface.
             </p>
           </div>
         </div>

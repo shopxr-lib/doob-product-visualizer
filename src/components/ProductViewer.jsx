@@ -7,35 +7,66 @@ import * as THREE from "three";
 
 // Model component that handles the actual 3D model
 const Model = ({ modelPath, showDimensions }) => {
-  const { scene } = useGLTF(modelPath);
+  const { scene: originalScene } = useGLTF(modelPath);
   const modelRef = useRef();
   const [modelDimensions, setModelDimensions] = useState(null);
   const [isAnimating, setAnimating] = useState(false);
 
   // Center the model and extract dimensions
   useEffect(() => {
-    if (modelRef.current && scene) {
+    if (!originalScene) return;
+    let finalBox = new THREE.Box3();
+
+    const clone = originalScene.clone(true);
+    clone.traverse((child) => {
+      if (child.isMesh) {
+        child.geometry.computeBoundingBox();
+        finalBox.union(
+          child.geometry.boundingBox.clone().applyMatrix4(child.matrixWorld)
+        );
+        // child.geometry.computeBoundingSphere();
+      }
+    });
+
+    if (modelRef.current) {
+      modelRef.current.clear(); // Clear prev childrend if any
+      modelRef.current.add(clone); // Add new model
+
       // Apply any necessary transformations to position the model correctly
       modelRef.current.position.set(0, -0.2, 0);
       modelRef.current.rotation.set(0, 0, 0);
 
-      // Extract dimensions from the model
-      const box = new THREE.Box3().setFromObject(scene);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      const dimensionsInCm = {
-        width: Math.round(size.x * 100),
-        height: Math.round(size.y * 100),
-        depth: Math.round(size.z * 100),
-      };
+      // Wait a frame to let it attach to the scene
+      requestAnimationFrame(() => {
+        const box = new THREE.Box3().setFromObject(clone);
+        const size = new THREE.Vector3();
+        console.log("Model size:", size);
+        box.getSize(size);
+        const dimensionsInCm = {
+          width: Math.round(size.x * 100),
+          height: Math.round(size.y * 100),
+          depth: Math.round(size.z * 100),
+        };
+        setModelDimensions(dimensionsInCm);
+      });
 
-      setModelDimensions(dimensionsInCm);
+      // Extract dimensions from the model
+      // const box = new THREE.Box3().setFromObject(clone);
+      // const size = new THREE.Vector3();
+      // box.getSize(size);
+      // const dimensionsInCm = {
+      //   width: Math.round(size.x * 100),
+      //   height: Math.round(size.y * 100),
+      //   depth: Math.round(size.z * 100),
+      // };
+
+      // setModelDimensions(dimensionsInCm);
 
       // Start rotation animation for a short time
       setAnimating(true);
       setTimeout(() => setAnimating(false), 1000); // 2 seconds animation
     }
-  }, [scene]);
+  }, [originalScene]);
 
   useFrame(() => {
     if (isAnimating && modelRef.current) {
@@ -46,7 +77,7 @@ const Model = ({ modelPath, showDimensions }) => {
 
   return (
     <group ref={modelRef}>
-      <primitive object={scene} scale={1} />
+      {/* <primitive object={scene} scale={1} /> */}
 
       {/* Add dimension lines when showDimensions is true and dimensions are available */}
       {showDimensions && modelDimensions && (
@@ -56,12 +87,12 @@ const Model = ({ modelPath, showDimensions }) => {
             start={[
               -modelDimensions.width / 200,
               -modelDimensions.height / 200 + 0.3,
-              -modelDimensions.depth / 200,
+              modelDimensions.depth / 200,
             ]}
             end={[
               modelDimensions.width / 200,
               -modelDimensions.height / 200 + 0.3,
-              -modelDimensions.depth / 200,
+              modelDimensions.depth / 200,
             ]}
             color="black"
             label={`${modelDimensions.width}cm`}
