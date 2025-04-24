@@ -1,4 +1,3 @@
-// src/pages/Plopsta.jsx
 import { ProductProvider } from "../context/ProductContext";
 import TopBar from "../components/TopBar";
 import ProductViewer from "../components/ProductViewer";
@@ -39,9 +38,9 @@ const Plopsta = () => {
 
           {/* Bottom section elements */}
           <div className="absolute bottom-0 left-0 w-full pointer-events-auto">
-            <div className="flex flex-col items-center pb-3">
+            <div className="flex flex-col items-center pb-1.5">
               <SizeCarousel />
-              <div className="flex items-center justify-center mt-2">
+              <div className="flex items-center justify-center mt-1">
                 <ARButton />
               </div>
               <Footer />

@@ -1,4 +1,4 @@
-import { createContext, useState, useContext } from "react";
+import { createContext, useState, useContext, useEffect } from "react";
 import productsData from "../data/productsData";
 
 //* Creating Context
@@ -17,6 +17,7 @@ export const ProductProvider = ({ children, initialProduct = "plop" }) => {
   );
 
   const [showDimensions, setShowDimensions] = useState(false);
+  const [dimensionUnit, setDimensionUnit] = useState("cm");
   const [isLoading, setIsLoading] = useState(false);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -45,10 +46,9 @@ export const ProductProvider = ({ children, initialProduct = "plop" }) => {
     setSelectedColor(color);
   };
 
-  //* Function to show/hide dimensions
-  const toggleDimensions = () => {
-    setShowDimensions((prev) => !prev);
-  };
+  useEffect(() => {
+    setShowDimensions(false);
+  }, [currentProduct, selectedSize, selectedColor]);
 
   //* Function to show/hide color dropdown
   const toggleColorDropdown = () => {
@@ -80,13 +80,15 @@ export const ProductProvider = ({ children, initialProduct = "plop" }) => {
     selectedSize,
     selectedColor,
     showDimensions,
+    setShowDimensions,
+    dimensionUnit,
+    setDimensionUnit,
     isLoading,
     showColorDropdown,
     showInfoModal,
     updateProduct,
     updateSize,
     updateColor,
-    toggleDimensions,
     setIsLoading,
     toggleColorDropdown,
     toggleInfoModal,

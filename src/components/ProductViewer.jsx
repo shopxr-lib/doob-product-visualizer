@@ -4,27 +4,29 @@ import { OrbitControls, Environment, useGLTF, Text } from "@react-three/drei";
 import { useProductContext } from "../context/ProductContext";
 import LoadingSpinner from "./LoadingSpinner";
 import * as THREE from "three";
+import gsap from "gsap";
 
 // Model component that handles the actual 3D model
 const Model = ({ modelPath, showDimensions }) => {
   const { scene: originalScene } = useGLTF(modelPath);
+  const { dimensionUnit } = useProductContext();
   const modelRef = useRef();
   const [modelDimensions, setModelDimensions] = useState(null);
-  const [isAnimating, setAnimating] = useState(false);
+  const firstLoadRef = useRef(true); // Track if it's first time model loading
 
   // Center the model and extract dimensions
   useEffect(() => {
     if (!originalScene) return;
-    let finalBox = new THREE.Box3();
 
     const clone = originalScene.clone(true);
+    let finalBox = new THREE.Box3();
+
     clone.traverse((child) => {
-      if (child.isMesh) {
+      if (child.isMesh && child.visible) {
         child.geometry.computeBoundingBox();
-        finalBox.union(
-          child.geometry.boundingBox.clone().applyMatrix4(child.matrixWorld)
-        );
-        // child.geometry.computeBoundingSphere();
+        const box = child.geometry.boundingBox.clone();
+        box.applyMatrix4(child.matrixWorld);
+        finalBox.union(box);
       }
     });
 
@@ -35,50 +37,77 @@ const Model = ({ modelPath, showDimensions }) => {
       // Apply any necessary transformations to position the model correctly
       modelRef.current.position.set(0, -0.2, 0);
       modelRef.current.rotation.set(0, 0, 0);
+      modelRef.current.scale.set(1, 1, 1);
+
+      // Animate appearance (scale + rotation) on first load
+      if (firstLoadRef.current) {
+        gsap.fromTo(
+          modelRef.current.scale,
+          { x: 0, y: 0, z: 0 },
+          {
+            x: 1,
+            y: 1,
+            z: 1,
+            duration: 1.5,
+            ease: "back.out(1.7)",
+          }
+        );
+
+        gsap.fromTo(
+          modelRef.current.rotation,
+          { y: Math.PI },
+          { y: 0, duration: 1.5, ease: "power2.out" }
+        );
+
+        firstLoadRef.current = false;
+      } else {
+        // Only rotate the model when a new one is selected
+        gsap.fromTo(
+          modelRef.current.rotation,
+          { y: 0 },
+          {
+            y: Math.PI * 2,
+            duration: 1.2,
+            ease: "power1.out",
+            onComplete: () => {
+              // Face the front toward camera (reset Y)
+              modelRef.current.rotation.y = 0;
+            },
+          }
+        );
+      }
 
       // Wait a frame to let it attach to the scene
       requestAnimationFrame(() => {
-        const box = new THREE.Box3().setFromObject(clone);
         const size = new THREE.Vector3();
-        console.log("Model size:", size);
-        box.getSize(size);
+        finalBox.getSize(size);
+
         const dimensionsInCm = {
-          width: Math.round(size.x * 100),
-          height: Math.round(size.y * 100),
-          depth: Math.round(size.z * 100),
+          width: (size.x * 100).toFixed(0),
+          height: (size.y * 100).toFixed(0),
+          depth: (size.z * 100).toFixed(0),
         };
+
         setModelDimensions(dimensionsInCm);
       });
-
-      // Extract dimensions from the model
-      // const box = new THREE.Box3().setFromObject(clone);
-      // const size = new THREE.Vector3();
-      // box.getSize(size);
-      // const dimensionsInCm = {
-      //   width: Math.round(size.x * 100),
-      //   height: Math.round(size.y * 100),
-      //   depth: Math.round(size.z * 100),
-      // };
-
-      // setModelDimensions(dimensionsInCm);
-
-      // Start rotation animation for a short time
-      setAnimating(true);
-      setTimeout(() => setAnimating(false), 1000); // 2 seconds animation
     }
   }, [originalScene]);
 
-  useFrame(() => {
-    if (isAnimating && modelRef.current) {
-      // Rotate the model smoothly
-      modelRef.current.rotation.y += 0.04; // Adjust speed as necessary
+  // Convert cm to inches
+  const convertToInches = (cm) => {
+    return (parseFloat(cm) * 0.393701).toFixed(0);
+  };
+
+  // Get the dimension value with the appropriate unit
+  const getDimensionValue = (value) => {
+    if (dimensionUnit === "inches") {
+      return `${convertToInches(value)}in`;
     }
-  });
+    return `${value}cm`;
+  };
 
   return (
     <group ref={modelRef}>
-      {/* <primitive object={scene} scale={1} /> */}
-
       {/* Add dimension lines when showDimensions is true and dimensions are available */}
       {showDimensions && modelDimensions && (
         <group>
@@ -87,15 +116,15 @@ const Model = ({ modelPath, showDimensions }) => {
             start={[
               -modelDimensions.width / 200,
               -modelDimensions.height / 200 + 0.3,
-              modelDimensions.depth / 200,
+              modelDimensions.depth / 200 + 0.1,
             ]}
             end={[
               modelDimensions.width / 200,
               -modelDimensions.height / 200 + 0.3,
-              modelDimensions.depth / 200,
+              modelDimensions.depth / 200 + 0.1,
             ]}
             color="black"
-            label={`${modelDimensions.width}cm`}
+            label={getDimensionValue(modelDimensions.width)}
           />
 
           {/* Height dimension line */}
@@ -111,7 +140,7 @@ const Model = ({ modelPath, showDimensions }) => {
               -modelDimensions.depth / 200,
             ]}
             color="black"
-            label={`${modelDimensions.height}cm`}
+            label={getDimensionValue(modelDimensions.height)}
           />
 
           {/* Depth dimension line */}
@@ -119,15 +148,15 @@ const Model = ({ modelPath, showDimensions }) => {
             start={[
               -modelDimensions.width / 200,
               -modelDimensions.height / 200 + 0.3,
-              -modelDimensions.depth / 200,
+              -modelDimensions.depth / 200 + 0.05,
             ]}
             end={[
               -modelDimensions.width / 200,
               -modelDimensions.height / 200 + 0.3,
-              modelDimensions.depth / 200,
+              modelDimensions.depth / 200 + 0.05,
             ]}
             color="black"
-            label={`${modelDimensions.depth}cm`}
+            label={getDimensionValue(modelDimensions.depth)}
           />
         </group>
       )}
@@ -140,42 +169,75 @@ const DimensionLine = ({ start, end, color, label }) => {
   const { camera } = useThree();
   const labelRef = useRef();
 
-  // Create points for the line
-  const points = [];
-  points.push(new THREE.Vector3(...start));
-  points.push(new THREE.Vector3(...end));
+  const startVec = new THREE.Vector3(...start);
+  const endVec = new THREE.Vector3(...end);
+  const direction = endVec.clone().sub(startVec).normalize();
+  const midPoint = startVec.clone().add(endVec).multiplyScalar(0.6);
 
-  // Create geometry from points
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-
-  // Calculate midpoint for label position
-  const midPoint = [
-    (start[0] + end[0]) / 2,
-    (start[1] + end[1]) / 2,
-    (start[2] + end[2]) / 2,
-  ];
+  // Main line geometry
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+    startVec,
+    endVec,
+  ]);
 
   useFrame(() => {
-    // Make the label always face the camera
     if (labelRef.current) {
       labelRef.current.lookAt(camera.position);
     }
   });
 
+  // Create perpendicular caps at exact endpoints
+  const capLength = 0.02;
+  const up = new THREE.Vector3(0, 1, 0);
+
+  // For horizontal lines, we need to adjust our perpendicular direction
+  let sideDir;
+
+  // Calculate the appropriate perpendicular direction based on line orientation
+  const isVertical = Math.abs(direction.y) > 0.9;
+  const isHorizontalX = Math.abs(direction.x) > 0.9;
+
+  if (isVertical) {
+    // For vertical lines, use Z axis for perpendicular
+    sideDir = new THREE.Vector3(0, 0, 1).normalize();
+  } else if (isHorizontalX) {
+    // For horizontal lines along X axis, use Y axis for perpendicular
+    sideDir = new THREE.Vector3(0, 1, 0).normalize();
+  } else {
+    // For other lines (like along Z axis), cross with up vector
+    sideDir = new THREE.Vector3().crossVectors(direction, up).normalize();
+  }
+
+  // Create caps for both endpoints
+  const caps = [startVec, endVec].map((point, i) => {
+    const capStart = point
+      .clone()
+      .add(sideDir.clone().multiplyScalar(-capLength / 2));
+    const capEnd = point
+      .clone()
+      .add(sideDir.clone().multiplyScalar(capLength / 2));
+    const capGeometry = new THREE.BufferGeometry().setFromPoints([
+      capStart,
+      capEnd,
+    ]);
+    return (
+      <line key={i} geometry={capGeometry}>
+        <lineBasicMaterial attach="material" color={color} />
+      </line>
+    );
+  });
+
   return (
     <group>
-      {/* Use built-in line with dashed material */}
+      {/* Full-length dimension line from start to end */}
       <line geometry={lineGeometry}>
-        <lineDashedMaterial
-          attach="material"
-          color={color}
-          dashSize={0.05}
-          gapSize={0.05}
-          linewidth={2}
-        />
+        <lineBasicMaterial attach="material" color={color} />
       </line>
 
-      {/* Label */}
+      {/* Caps at exact start and end */}
+      {caps}
+
+      {/* Label floating in center with invisible background for click blocking */}
       {label && (
         <group ref={labelRef} position={midPoint}>
           <mesh>
@@ -184,8 +246,9 @@ const DimensionLine = ({ start, end, color, label }) => {
           </mesh>
           <Text
             position={[0, 0, 0.01]}
-            color="black"
-            fontSize={0.07}
+            color={color}
+            fontSize={0.04}
+            fontWeight="bold"
             anchorX="center"
             anchorY="middle"
           >
