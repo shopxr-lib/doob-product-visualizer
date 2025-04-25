@@ -5,6 +5,7 @@ import { useProductContext } from "../context/ProductContext";
 import LoadingSpinner from "./LoadingSpinner";
 import * as THREE from "three";
 import gsap from "gsap";
+import "@google/model-viewer";
 
 // Model component that handles the actual 3D model
 const Model = ({ modelPath, showDimensions }) => {
@@ -35,7 +36,7 @@ const Model = ({ modelPath, showDimensions }) => {
       modelRef.current.add(clone); // Add new model
 
       // Apply any necessary transformations to position the model correctly
-      modelRef.current.position.set(0, -0.2, 0);
+      modelRef.current.position.set(0, -0.25, 0);
       modelRef.current.rotation.set(0, 0, 0);
       modelRef.current.scale.set(1, 1, 1);
 
@@ -281,12 +282,38 @@ const ProductViewer = () => {
 
   const modelPath = getCurrentModelPath();
 
+  //* Add model-viewer element for AR
+  useEffect(() => {
+    //* Create model-viewer element
+    if (!document.querySelector("model-viewer")) {
+      const modelViewerElement = document.createElement("model-viewer");
+      modelViewerElement.id = "ar-model-viewer";
+      modelViewerElement.src = modelPath;
+      modelViewerElement.alt = "3D Model";
+      modelViewerElement.ar = true;
+      modelViewerElement.arModes = "webxr scene-viewer quick-look";
+      modelViewerElement.arScale = "fixed";
+      modelViewerElement.autoRotate = false;
+      modelViewerElement.iosSrc = modelPath.replace(".glb", ".usdz");
+      modelViewerElement.style.display = "none";
+      modelViewerElement.style.width = "0";
+      modelViewerElement.style.height = "0";
+      modelViewerElement.style.position = "absolute";
+      document.body.appendChild(modelViewerElement);
+    } else {
+      // Update existing model-viewer with new model path
+      const modelViewerElement = document.querySelector("model-viewer");
+      modelViewerElement.src = modelPath;
+      modelViewerElement.iosSrc = modelPath.replace(".glb", ".usdz");
+    }
+  }, [modelPath]);
+
   return (
     <div className="absolute top-0 left-0 w-full h-full">
       <Suspense fallback={<LoadingSpinner />}>
         <Canvas
           shadows
-          camera={{ position: [0, 0, 3], fov: 50 }}
+          camera={{ position: [-1.5, 0.6, 3], fov: 40 }}
           onCreated={() => setIsLoading(false)}
           className="w-full h-full"
         >

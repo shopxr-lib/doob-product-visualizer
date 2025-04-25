@@ -83,7 +83,7 @@ const DimensionToggle = () => {
               <button
                 className={`block w-full text-left px-4 py-2 text-sm ${
                   dimensionUnit === "cm" && showDimensions
-                    ? "bg-blue-100 text-blue-800"
+                    ? "bg-[#B1DFE0] text-gray-800"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
                 onClick={() => handleUnitClick("cm")}
@@ -93,7 +93,7 @@ const DimensionToggle = () => {
               <button
                 className={`block w-full text-left px-4 py-2 text-sm ${
                   dimensionUnit === "inches" && showDimensions
-                    ? "bg-blue-100 text-blue-800"
+                    ? "bg-blue-100 text-gray-800"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
                 onClick={() => handleUnitClick("inches")}
