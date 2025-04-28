@@ -9,6 +9,9 @@ const ARButton = () => {
 
   //* Check if the device is mobile
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const arMode = urlParams.get("ar");
+
     const checkMobile = () => {
       const userAgent = navigator.userAgent || window.opera;
       const isMobileDevice = /android|iphone|ipad|ipod|windows phone/i.test(
@@ -18,17 +21,32 @@ const ARButton = () => {
     };
 
     checkMobile();
+
+    if (arMode === "true" && isMobile) {
+      //* Automatically activate AR when page loads from QR scan
+      setTimeout(() => {
+        const modelViewer = document.querySelector("model-viewer");
+        if (modelViewer) {
+          modelViewer.activateAR();
+        }
+      }, 1000);
+    }
+
     window.addEventListener("resize", checkMobile);
 
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  }, [isMobile]);
 
   const handleARClick = () => {
     if (isMobile) {
       // On mobile, trigger AR view through model-viewer
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
-        modelViewer.activateAR();
+        if (modelViewer.canActivateAR) {
+          modelViewer.activateAR();
+        } else {
+          alert("AR is not available on this device or browser.");
+        }
       }
     } else {
       // On desktop, show QR code modal
@@ -65,8 +83,8 @@ const ARButton = () => {
             </p>
             <div className="flex justify-center mb-4">
               <QRCode
-                // value={`http://192.168.0.103:5173${window.location.pathname}`} // View the AR in local server without deploy
-                value={window.location.href}
+                value={`http://192.168.0.103:5173${window.location.pathname}`} // View the AR in local server without deploy
+                // value={`${window.location.origin}${window.location.pathname}?ar=true`}
                 size={200}
                 level="H"
               />
