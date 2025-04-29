@@ -119,7 +119,7 @@ const ARButton = () => {
               <QRCode
                 // value={`http://192.168.0.103:5173${window.location.pathname}`} // View the AR in local server without deploy
                 // value={`${window.location.origin}${window.location.pathname}?ar=true`}
-                value={`https://doob.shopxr.org/viewer?model=${modelPath}&ar=true`}
+                value={`https://doob.shopxr.org/${modelPath}&ar=true`}
                 size={200}
                 level="H"
               />
