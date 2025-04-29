@@ -76,12 +76,7 @@ const ARButton = () => {
       if (modelViewer) {
         console.log("Attempting to activate AR via button click");
         try {
-          if (modelViewer.canActivateAR) {
-            modelViewer.activateAR();
-          } else {
-            console.warn("AR not available, trying to activate anyway...");
-            modelViewer.activateAR();
-          }
+          modelViewer.activateAR();
         } catch (error) {
           console.error("Error activating AR:", error);
           alert("Error activating AR. Please try again.");
