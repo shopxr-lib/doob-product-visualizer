@@ -5,6 +5,7 @@ import QRCode from "react-qr-code";
 const ARButton = () => {
   const [showModal, setShowModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isARSupported, setIsARSupported] = useState(false);
   const { getCurrentModelPath } = useProductContext();
 
   //* Check if the device is mobile
@@ -22,19 +23,47 @@ const ARButton = () => {
 
     checkMobile();
 
+    //* Check if AR is supported
+    const checkARSupport = () => {
+      const modelViewer = document.querySelector("model-viewer");
+      if (modelViewer) {
+        setIsARSupported(!!modelViewer.canActivateAR);
+        console.log("AR supported:", !!modelViewer.canActivateAR);
+      }
+    };
+
+    //* Wait for model-viewer to be ready before checking AR support
+    const checkModelViewerReady = setInterval(() => {
+      const modelViewer = document.querySelector("model-viewer");
+      if (modelViewer) {
+        clearInterval(checkModelViewerReady);
+
+        setTimeout(checkARSupport, 1000);
+      }
+    }, 200);
+
+    //* Handle AR mode from URL parameter
     if (arMode === "true" && isMobile) {
       //* Automatically activate AR when page loads from QR scan
       setTimeout(() => {
         const modelViewer = document.querySelector("model-viewer");
         if (modelViewer) {
-          modelViewer.activateAR();
+          console.log("Attempting to activate AR from URL param");
+          try {
+            modelViewer.activateAR();
+          } catch (error) {
+            console.error("Error activating AR:", error);
+          }
         }
-      }, 1000);
+      }, 1500);
     }
 
     window.addEventListener("resize", checkMobile);
 
-    return () => window.removeEventListener("resize", checkMobile);
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      clearInterval(checkModelViewerReady);
+    };
   }, [isMobile]);
 
   const handleARClick = () => {
@@ -42,10 +71,44 @@ const ARButton = () => {
       // On mobile, trigger AR view through model-viewer
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
-        if (modelViewer.canActivateAR) {
-          modelViewer.activateAR();
-        } else {
-          alert("AR is not available on this device or browser.");
+        console.log("Attempting to activate AR via button click");
+        try {
+          // For some Android devices, this hack may help
+          // modelViewer.style.display = "block";
+          // modelViewer.style.width = "100vw";
+          // modelViewer.style.height = "100vh";
+          // modelViewer.style.position = "fixed";
+          // modelViewer.style.top = "0";
+          // modelViewer.style.left = "0";
+          // modelViewer.style.zIndex = "9999";
+
+          setTimeout(() => {
+            if (modelViewer.canActivateAR) {
+              modelViewer.activateAR();
+            } else {
+              // Fallback for devices that report AR not available
+              // Sometimes forcibly trying to activate AR works even when canActivateAR is false
+              try {
+                modelViewer.activateAR();
+              } catch (e) {
+                alert("AR is not available on this device or browser.");
+                console.error("AR activation failed:", e);
+
+                // Reset the model-viewer if AR activation fails
+                modelViewer.style.display = "none";
+                modelViewer.style.width = "0";
+                modelViewer.style.height = "0";
+              }
+            }
+          }, 100);
+        } catch (error) {
+          console.error("Error activating AR:", error);
+          alert("Error activating AR. Please try again.");
+
+          // Reset the model-viewer
+          modelViewer.style.display = "none";
+          modelViewer.style.width = "0";
+          modelViewer.style.height = "0";
         }
       }
     } else {

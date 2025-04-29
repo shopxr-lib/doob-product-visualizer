@@ -290,21 +290,44 @@ const ProductViewer = () => {
       modelViewerElement.id = "ar-model-viewer";
       modelViewerElement.src = modelPath;
       modelViewerElement.alt = "3D Model";
-      modelViewerElement.ar = true;
-      modelViewerElement.arModes = "webxr scene-viewer quick-look";
-      modelViewerElement.arScale = "fixed";
-      modelViewerElement.autoRotate = false;
-      modelViewerElement.iosSrc = modelPath.replace(".glb", ".usdz");
+      modelViewerElement.setAttribute("ar", "");
+      modelViewerElement.setAttribute(
+        "ar-modes",
+        "webxr scene-viewer quick-look"
+      );
+      modelViewerElement.setAttribute("ar-scale", "fixed");
+      modelViewerElement.setAttribute("camera-controls", "");
+      modelViewerElement.setAttribute("auto-rotate", "false");
+
+      // Attributes to help with AR initialization
+      modelViewerElement.setAttribute("seamless-poster", "");
+      modelViewerElement.setAttribute("shadow-intensity", "1");
+      modelViewerElement.setAttribute("environment-image", "neutral");
+
+      // iOS source for USDZ
+      modelViewerElement.setAttribute(
+        "ios-src",
+        modelPath.replace(".glb", ".usdz")
+      );
+
       modelViewerElement.style.display = "none";
       modelViewerElement.style.width = "0";
       modelViewerElement.style.height = "0";
       modelViewerElement.style.position = "absolute";
       document.body.appendChild(modelViewerElement);
+
+      // Event listeners for debugging
+      modelViewerElement.addEventListener("ar-status", (event) => {
+        console.log("AR Status:", event.detail.status);
+      });
     } else {
       // Update existing model-viewer with new model path
       const modelViewerElement = document.querySelector("model-viewer");
       modelViewerElement.src = modelPath;
-      modelViewerElement.iosSrc = modelPath.replace(".glb", ".usdz");
+      modelViewerElement.setAttribute(
+        "ios-src",
+        modelPath.replace(".glb", ".usdz")
+      );
     }
   }, [modelPath]);
 
