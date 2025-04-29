@@ -286,12 +286,10 @@ const ProductViewer = () => {
   //* Add model-viewer element for AR
   useEffect(() => {
     //* Create model-viewer element
-    if (!document.querySelector("model-viewer")) {
-      const modelViewerElement = document.createElement("model-viewer");
+    let modelViewerElement = document.querySelector("model-viewer");
+    if (!modelViewerElement) {
+      modelViewerElement = document.createElement("model-viewer");
       modelViewerElement.id = "ar-model-viewer";
-      modelViewerElement.src = `https://doob.shopxr.org${modelPath}`;
-      console.log(modelViewerElement.src);
-      modelViewerElement.alt = "3D Model";
       modelViewerElement.setAttribute("ar", "");
       modelViewerElement.setAttribute(
         "ar-modes",
@@ -305,44 +303,53 @@ const ProductViewer = () => {
       modelViewerElement.setAttribute("seamless-poster", "");
       modelViewerElement.setAttribute("shadow-intensity", "1");
       modelViewerElement.setAttribute("environment-image", "neutral");
+      modelViewerElement.setAttribute("ar-placement", "floor");
 
-      // iOS source for USDZ
-      modelViewerElement.setAttribute(
-        "ios-src",
-        modelPath.replace(".glb", ".usdz")
-      );
-
-      modelViewerElement.style.display = "none";
-      modelViewerElement.style.width = "0";
-      modelViewerElement.style.height = "0";
+      // Make sure it's clickable but not visible
+      modelViewerElement.style.display = "block";
+      modelViewerElement.style.width = "1px";
+      modelViewerElement.style.height = "1px";
       modelViewerElement.style.position = "absolute";
+      modelViewerElement.style.bottom = "0";
+      modelViewerElement.style.right = "0";
+      modelViewerElement.style.opacity = "0.01"; // Not fully invisible to ensure clickability
+      modelViewerElement.style.pointerEvents = "auto";
+
       document.body.appendChild(modelViewerElement);
 
-      // Event listener for when the model-viewer is loaded
-      modelViewerElement.addEventListener("load", () => {
-        const params = new URLSearchParams(window.location.search);
-        const shouldAutoLaunchAR = params.get("ar") === "true";
-        if (shouldAutoLaunchAR && modelViewerElement.canActivateAR) {
-          modelViewerElement.activateAR();
-        }
-      });
-
-      // Event listeners for debugging
+      // Debug event listeners
       modelViewerElement.addEventListener("ar-status", (event) => {
         console.log("AR Status:", event.detail.status);
-        if (event.detail.status === "error") {
-          console.error("AR Error:", event.detail);
+        if (event.detail.status === "failed") {
+          console.error("AR Failed:", event.detail);
+        } else if (event.detail.status === "session-started") {
+          console.log("AR Session Started");
         }
       });
-    } else {
-      // Update existing model-viewer with new model path
-      const modelViewerElement = document.querySelector("model-viewer");
-      modelViewerElement.src = `https://doob.shopxr.org${modelPath}`;
-      modelViewerElement.setAttribute(
-        "ios-src",
-        modelPath.replace(".glb", ".usdz")
-      );
     }
+
+    // Always update the source when model changes
+    const fullModelPath = `https://doob.shopxr.org${modelPath}`;
+    modelViewerElement.src = fullModelPath;
+    console.log("Setting model-viewer src to:", fullModelPath);
+
+    // iOS source for USDZ - make sure the path exists
+    const usdzPath = modelPath.replace(".glb", ".usdz");
+    modelViewerElement.setAttribute(
+      "ios-src",
+      `https://doob.shopxr.org${usdzPath}`
+    );
+
+    // Handle the AR URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const arMode = urlParams.get("ar");
+    if (arMode === "true") {
+      console.log("AR URL parameter detected");
+      // We'll let the ARButton component handle actual AR activation
+      // to ensure the model is fully loaded first
+    }
+
+    return () => {};
   }, [modelPath]);
 
   return (

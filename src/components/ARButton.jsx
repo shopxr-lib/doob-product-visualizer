@@ -13,9 +13,6 @@ const ARButton = () => {
 
   //* Check if the device is mobile
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const arMode = urlParams.get("ar");
-
     const checkMobile = () => {
       const userAgent = navigator.userAgent || window.opera;
       const isMobileDevice = /android|iphone|ipad|ipod|windows phone/i.test(
@@ -26,46 +23,84 @@ const ARButton = () => {
 
     checkMobile();
 
-    //* Check if AR is supported
+    //* Check for URL parameters on component mount
+    const urlParams = new URLSearchParams(window.location.search);
+    const arMode = urlParams.get("ar");
+
+    // Check if AR is supported
     const checkARSupport = () => {
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
         setIsARSupported(!!modelViewer.canActivateAR);
         console.log("AR supported:", !!modelViewer.canActivateAR);
+
+        // Automatically trigger AR if URL parameter is present
+        if (arMode === "true" && isMobile) {
+          console.log("Auto-activating AR from URL param");
+          setTimeout(() => {
+            try {
+              modelViewer.activateAR();
+            } catch (error) {
+              console.error("Error auto-activating AR:", error);
+            }
+          }, 1500);
+        }
       }
     };
 
-    //* Wait for model-viewer to be ready before checking AR support
-    const checkModelViewerReady = setInterval(() => {
-      const modelViewer = document.querySelector("model-viewer");
-      if (modelViewer) {
-        clearInterval(checkModelViewerReady);
-
-        setTimeout(checkARSupport, 1000);
-      }
-    }, 200);
-
-    //* Handle AR mode from URL parameter
-    if (arMode === "true" && isMobile) {
-      //* Automatically activate AR when page loads from QR scan
-      setTimeout(() => {
-        const modelViewer = document.querySelector("model-viewer");
-        if (modelViewer) {
-          console.log("Attempting to activate AR from URL param");
-          try {
-            modelViewer.activateAR();
-          } catch (error) {
-            console.error("Error activating AR:", error);
-          }
-        }
-      }, 1500);
+    // Check for model-viewer and set up event listener
+    const modelViewerElement = document.querySelector("model-viewer");
+    if (modelViewerElement) {
+      // Wait for model-viewer to load before checking AR support
+      modelViewerElement.addEventListener("load", checkARSupport);
     }
+
+    // Set up interval to check for model-viewer in case it's not loaded yet
+    const checkInterval = setInterval(() => {
+      const modelViewer = document.querySelector("model-viewer");
+      if (modelViewer && !modelViewer.hasAttribute("data-ar-checked")) {
+        clearInterval(checkInterval);
+        modelViewer.setAttribute("data-ar-checked", "true");
+        checkARSupport();
+      }
+    }, 500);
+
+    // Wait for model-viewer to be ready before checking AR support
+    // const checkModelViewerReady = setInterval(() => {
+    //   const modelViewer = document.querySelector("model-viewer");
+    //   if (modelViewer) {
+    //     clearInterval(checkModelViewerReady);
+
+    //     setTimeout(checkARSupport, 1000);
+    //   }
+    // }, 200);
+
+    // Handle AR mode from URL parameter
+    // if (arMode === "true" && isMobile) {
+    //  Automatically activate AR when page loads from QR scan
+    //   setTimeout(() => {
+    //     const modelViewer = document.querySelector("model-viewer");
+    //     if (modelViewer) {
+    //       console.log("Attempting to activate AR from URL param");
+    //       try {
+    //         modelViewer.activateAR();
+    //       } catch (error) {
+    //         console.error("Error activating AR:", error);
+    //       }
+    //     }
+    //   }, 1500);
+    // }
 
     window.addEventListener("resize", checkMobile);
 
     return () => {
       window.removeEventListener("resize", checkMobile);
-      clearInterval(checkModelViewerReady);
+      clearInterval(checkInterval);
+
+      // Clean up event listener
+      if (modelViewerElement) {
+        modelViewerElement.removeEventListener("load", checkARSupport);
+      }
     };
   }, [isMobile]);
 
@@ -74,13 +109,19 @@ const ARButton = () => {
       // On mobile, trigger AR view through model-viewer
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
-        console.log("Attempting to activate AR via button click");
+        console.log("Activating AR via button click");
         try {
-          modelViewer.activateAR();
+          // Force a small delay before activating AR
+          setTimeout(() => {
+            modelViewer.activateAR();
+          }, 300);
         } catch (error) {
           console.error("Error activating AR:", error);
           alert("Error activating AR. Please try again.");
         }
+      } else {
+        console.error("Model viewer element not found");
+        alert("AR viewer not ready. Please try again in a moment.");
       }
     } else {
       // On desktop, show QR code modal
@@ -119,9 +160,7 @@ const ARButton = () => {
               <QRCode
                 // value={`http://192.168.0.103:5173${window.location.pathname}`} // View the AR in local server without deploy
                 value={`${window.location.origin}${window.location.pathname}?ar=true`}
-                // value={`https://doob.shopxr.org/viewer?model=${encodeURIComponent(
-                //   modelPath
-                // )}&ar=true`}
+                // value={`https://doob.shopxr.org/ar-viewer?model=${modelPath}&ar=true`}
                 size={200}
                 level="H"
               />
