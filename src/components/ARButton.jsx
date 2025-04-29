@@ -8,6 +8,9 @@ const ARButton = () => {
   const [isARSupported, setIsARSupported] = useState(false);
   const { getCurrentModelPath } = useProductContext();
 
+  const modelPath = getCurrentModelPath();
+  console.log("model path ar button", modelPath);
+
   //* Check if the device is mobile
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -138,7 +141,7 @@ const ARButton = () => {
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
             <h3 className="text-xl font-semibold mb-4 text-center">
-              View in AR
+              View in AR Mode
             </h3>
             <p className="mb-4 text-center">
               Scan this QR code with your mobile device to view this product in
@@ -147,7 +150,10 @@ const ARButton = () => {
             <div className="flex justify-center mb-4">
               <QRCode
                 // value={`http://192.168.0.103:5173${window.location.pathname}`} // View the AR in local server without deploy
-                value={`${window.location.origin}${window.location.pathname}?ar=true`}
+                // value={`${window.location.origin}${window.location.pathname}?ar=true`}
+                value={`https://doob.shopxr.org/viewer?model=${encodeURIComponent(
+                  modelPath
+                )}&ar=true`}
                 size={200}
                 level="H"
               />
