@@ -281,6 +281,7 @@ const ProductViewer = () => {
     useProductContext();
 
   const modelPath = getCurrentModelPath();
+  console.log("modelPath:", modelPath);
 
   //* Add model-viewer element for AR
   useEffect(() => {
@@ -288,7 +289,7 @@ const ProductViewer = () => {
     if (!document.querySelector("model-viewer")) {
       const modelViewerElement = document.createElement("model-viewer");
       modelViewerElement.id = "ar-model-viewer";
-      modelViewerElement.src = modelPath;
+      modelViewerElement.src = `https://doob.shopxr.org/${modelPath}`;
       modelViewerElement.alt = "3D Model";
       modelViewerElement.setAttribute("ar", "");
       modelViewerElement.setAttribute(
@@ -323,7 +324,7 @@ const ProductViewer = () => {
     } else {
       // Update existing model-viewer with new model path
       const modelViewerElement = document.querySelector("model-viewer");
-      modelViewerElement.src = modelPath;
+      modelViewerElement.src = `https://doob.shopxr.org/${modelPath}`;
       modelViewerElement.setAttribute(
         "ios-src",
         modelPath.replace(".glb", ".usdz")
