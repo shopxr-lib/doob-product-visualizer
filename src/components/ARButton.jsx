@@ -76,42 +76,15 @@ const ARButton = () => {
       if (modelViewer) {
         console.log("Attempting to activate AR via button click");
         try {
-          // For some Android devices, this hack may help
-          // modelViewer.style.display = "block";
-          // modelViewer.style.width = "100vw";
-          // modelViewer.style.height = "100vh";
-          // modelViewer.style.position = "fixed";
-          // modelViewer.style.top = "0";
-          // modelViewer.style.left = "0";
-          // modelViewer.style.zIndex = "9999";
-
-          setTimeout(() => {
-            if (modelViewer.canActivateAR) {
-              modelViewer.activateAR();
-            } else {
-              // Fallback for devices that report AR not available
-              // Sometimes forcibly trying to activate AR works even when canActivateAR is false
-              try {
-                modelViewer.activateAR();
-              } catch (e) {
-                alert("AR is not available on this device or browser.");
-                console.error("AR activation failed:", e);
-
-                // Reset the model-viewer if AR activation fails
-                modelViewer.style.display = "none";
-                modelViewer.style.width = "0";
-                modelViewer.style.height = "0";
-              }
-            }
-          }, 100);
+          if (modelViewer.canActivateAR) {
+            modelViewer.activateAR();
+          } else {
+            console.warn("AR not available, trying to activate anyway...");
+            modelViewer.activateAR();
+          }
         } catch (error) {
           console.error("Error activating AR:", error);
           alert("Error activating AR. Please try again.");
-
-          // Reset the model-viewer
-          modelViewer.style.display = "none";
-          modelViewer.style.width = "0";
-          modelViewer.style.height = "0";
         }
       }
     } else {
@@ -150,10 +123,10 @@ const ARButton = () => {
             <div className="flex justify-center mb-4">
               <QRCode
                 // value={`http://192.168.0.103:5173${window.location.pathname}`} // View the AR in local server without deploy
-                // value={`${window.location.origin}${window.location.pathname}?ar=true`}
-                value={`https://doob.shopxr.org/viewer?model=${encodeURIComponent(
-                  modelPath
-                )}&ar=true`}
+                value={`${window.location.origin}${window.location.pathname}?ar=true`}
+                // value={`https://doob.shopxr.org/viewer?model=${encodeURIComponent(
+                //   modelPath
+                // )}&ar=true`}
                 size={200}
                 level="H"
               />

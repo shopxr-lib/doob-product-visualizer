@@ -317,18 +317,21 @@ const ProductViewer = () => {
       modelViewerElement.style.position = "absolute";
       document.body.appendChild(modelViewerElement);
 
-      // Auto-launch AR if ?ar=true is in the URL
-      const params = new URLSearchParams(window.location.search);
-      const shouldAutoLaunchAR = params.get("ar") === "true";
-      if (shouldAutoLaunchAR) {
-        modelViewerElement.addEventListener("load", () => {
+      // Event listener for when the model-viewer is loaded
+      modelViewerElement.addEventListener("load", () => {
+        const params = new URLSearchParams(window.location.search);
+        const shouldAutoLaunchAR = params.get("ar") === "true";
+        if (shouldAutoLaunchAR && modelViewerElement.canActivateAR) {
           modelViewerElement.activateAR();
-        });
-      }
+        }
+      });
 
       // Event listeners for debugging
       modelViewerElement.addEventListener("ar-status", (event) => {
         console.log("AR Status:", event.detail.status);
+        if (event.detail.status === "error") {
+          console.error("AR Error:", event.detail);
+        }
       });
     } else {
       // Update existing model-viewer with new model path
