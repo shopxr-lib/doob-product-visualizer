@@ -118,8 +118,10 @@ const ARButton = () => {
             <div className="flex justify-center mb-4">
               <QRCode
                 // value={`http://192.168.0.103:5173${window.location.pathname}`} // View the AR in local server without deploy
-                // value={`${window.location.origin}${window.location.pathname}?ar=true`}
-                value={`https://doob.shopxr.org/${modelPath}&ar=true`}
+                value={`${window.location.origin}${window.location.pathname}?ar=true`}
+                // value={`https://doob.shopxr.org/viewer?model=${encodeURIComponent(
+                //   modelPath
+                // )}&ar=true`}
                 size={200}
                 level="H"
               />
