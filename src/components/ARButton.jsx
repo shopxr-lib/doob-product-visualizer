@@ -65,32 +65,6 @@ const ARButton = () => {
       }
     }, 500);
 
-    // Wait for model-viewer to be ready before checking AR support
-    // const checkModelViewerReady = setInterval(() => {
-    //   const modelViewer = document.querySelector("model-viewer");
-    //   if (modelViewer) {
-    //     clearInterval(checkModelViewerReady);
-
-    //     setTimeout(checkARSupport, 1000);
-    //   }
-    // }, 200);
-
-    // Handle AR mode from URL parameter
-    // if (arMode === "true" && isMobile) {
-    //  Automatically activate AR when page loads from QR scan
-    //   setTimeout(() => {
-    //     const modelViewer = document.querySelector("model-viewer");
-    //     if (modelViewer) {
-    //       console.log("Attempting to activate AR from URL param");
-    //       try {
-    //         modelViewer.activateAR();
-    //       } catch (error) {
-    //         console.error("Error activating AR:", error);
-    //       }
-    //     }
-    //   }, 1500);
-    // }
-
     window.addEventListener("resize", checkMobile);
 
     return () => {
