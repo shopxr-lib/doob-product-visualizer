@@ -275,102 +275,6 @@ const ControlledOrbitControls = () => {
   );
 };
 
-// GLB to USDZ converter using model-viewer's built-in functionality
-const convertGlbToUsdz = async (glbUrl) => {
-  try {
-    // Get or create model-viewer element for conversion
-    let converterModelViewer = document.getElementById(
-      "converter-model-viewer"
-    );
-    if (!converterModelViewer) {
-      converterModelViewer = document.createElement("model-viewer");
-      converterModelViewer.id = "converter-model-viewer";
-      converterModelViewer.style.width = "0";
-      converterModelViewer.style.height = "0";
-      converterModelViewer.style.position = "absolute";
-      converterModelViewer.style.opacity = "0";
-      converterModelViewer.setAttribute("ar", "");
-      converterModelViewer.setAttribute(
-        "ar-modes",
-        "webxr scene-viewer quick-look"
-      );
-      document.body.appendChild(converterModelViewer);
-    }
-
-    // Set the source to the GLB file
-    converterModelViewer.src = glbUrl;
-
-    // Create a promise that resolves when the model loads
-    await new Promise((resolve, reject) => {
-      const onLoad = () => {
-        converterModelViewer.removeEventListener("load", onLoad);
-        converterModelViewer.removeEventListener("error", onError);
-        clearTimeout(timeoutId);
-        resolve();
-      };
-
-      const onError = (error) => {
-        converterModelViewer.removeEventListener("load", onLoad);
-        converterModelViewer.removeEventListener("error", onError);
-        clearTimeout(timeoutId);
-        reject(new Error(`Failed to load model: ${error}`));
-      };
-
-      converterModelViewer.addEventListener("load", onLoad);
-      converterModelViewer.addEventListener("error", onError);
-
-      // Set a timeout in case the model never loads
-      const timeoutId = setTimeout(() => {
-        converterModelViewer.removeEventListener("load", onLoad);
-        converterModelViewer.removeEventListener("error", onError);
-        reject(new Error("Model loading timed out"));
-      }, 15000); // 15 seconds timeout
-    });
-
-    // Generate USDZ using model-viewer
-    console.log("Model loaded, converting to USDZ...");
-    const usdzUrl = await converterModelViewer.exportModel("usdz");
-    console.log("USDZ conversion successful:", usdzUrl);
-
-    // Cache the result
-    try {
-      localStorage.setItem(
-        `usdz-cache-${btoa(glbUrl)}`,
-        JSON.stringify({
-          usdzUrl,
-          timestamp: Date.now(),
-        })
-      );
-    } catch (e) {
-      console.warn("Failed to cache model in localStorage", e);
-    }
-
-    return usdzUrl;
-  } catch (error) {
-    console.error("Error converting GLB to USDZ:", error);
-
-    // Try to get from cache if available
-    try {
-      const cachedData = localStorage.getItem(`usdz-cache-${btoa(glbUrl)}`);
-      if (cachedData) {
-        const parsed = JSON.parse(cachedData);
-        console.log("Using cached USDZ model");
-        return parsed.usdzUrl;
-      }
-    } catch (e) {
-      console.warn("Failed to retrieve cached model", e);
-    }
-
-    return null;
-  }
-};
-
-// Check if device is iOS
-const isIOS = () => {
-  const userAgent = window.navigator.userAgent.toLowerCase();
-  return /iphone|ipad|ipod/.test(userAgent);
-};
-
 // Main ProductViewer component
 const ProductViewer = () => {
   const { getCurrentModelPath, showDimensions, setIsLoading } =
@@ -378,12 +282,14 @@ const ProductViewer = () => {
 
   const modelPath = getCurrentModelPath();
   console.log("modelPath:", modelPath);
-  const [usdzUrl, setUsdzUrl] = useState(null);
 
   //* Add model-viewer element for AR
   useEffect(() => {
-    const isIOSDevice = isIOS();
-    const fullModelPath = `https://doob.shopxr.org${modelPath}`;
+    //* Helper function to detect iOS device
+    const isIOS = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+    };
 
     //* Create model-viewer element
     let modelViewerElement = document.querySelector("model-viewer");
@@ -428,67 +334,36 @@ const ProductViewer = () => {
       });
     }
 
-    // Always update the source when model changes
-    modelViewerElement.src = fullModelPath;
-    console.log("Setting model-viewer src to:", fullModelPath);
+    // Detect device and set appropriate model format
+    const isIOSDevice = isIOS();
+    console.log("Device detection: iOS =", isIOSDevice);
 
-    // For iOS, convert GLB to USDZ on-the-fly using model-viewer's converter
+    // Set the base URL for the model
+    const baseUrl = "https://doob.shopxr.org";
+
+    // For Android (or non-iOS) devices, use GLB
+    if (!isIOSDevice) {
+      // Always update the source when model changes for Android/other devices
+      const fullModelPath = `${baseUrl}${modelPath}`;
+      modelViewerElement.src = fullModelPath;
+      console.log("Setting model-viewer src for Android to:", fullModelPath);
+    }
+
+    // For iOS devices, we need USDZ
     if (isIOSDevice) {
-      // Check local storage first
-      const cachedData = localStorage.getItem(
-        `usdz-cache-${btoa(fullModelPath)}`
-      );
-
-      if (cachedData) {
-        try {
-          const parsed = JSON.parse(cachedData);
-          // Check if cache is still valid (not expired)
-          const maxAge = 7 * 24 * 60 * 60 * 1000; // 1 week
-          if (Date.now() - parsed.timestamp < maxAge) {
-            console.log("Using cached USDZ URL:", parsed.usdzUrl);
-            setUsdzUrl(parsed.usdzUrl);
-            modelViewerElement.setAttribute("ios-src", parsed.usdzUrl);
-            return;
-          }
-        } catch (e) {
-          console.warn("Failed to parse cached USDZ data", e);
-        }
-      }
-
-      // No valid cache, convert on-the-fly
-      console.log("iOS device detected, converting GLB to USDZ...");
-      convertGlbToUsdz(fullModelPath)
-        .then((generatedUsdzUrl) => {
-          if (generatedUsdzUrl) {
-            console.log("Setting iOS src to generated USDZ:", generatedUsdzUrl);
-            setUsdzUrl(generatedUsdzUrl);
-            modelViewerElement.setAttribute("ios-src", generatedUsdzUrl);
-          } else {
-            // Fallback to static USDZ if conversion fails
-            const usdzPath = modelPath.replace(".glb", ".usdz");
-            console.log("Conversion failed, falling back to static USDZ path");
-            modelViewerElement.setAttribute(
-              "ios-src",
-              `https://doob.shopxr.org${usdzPath}`
-            );
-          }
-        })
-        .catch((error) => {
-          console.error("USDZ conversion error:", error);
-          // Fallback to static USDZ if conversion fails
-          const usdzPath = modelPath.replace(".glb", ".usdz");
-          modelViewerElement.setAttribute(
-            "ios-src",
-            `https://doob.shopxr.org${usdzPath}`
-          );
-        });
-    } else {
-      // For non-iOS devices, use the static path (if needed)
+      // Create the USDZ path
       const usdzPath = modelPath.replace(".glb", ".usdz");
-      modelViewerElement.setAttribute(
-        "ios-src",
-        `https://doob.shopxr.org${usdzPath}`
-      );
+      const fullUsdzPath = `${baseUrl}${usdzPath}`;
+
+      // For iOS, we set the src to GLB (for preview) but use ios-src for AR
+      modelViewerElement.src = `${baseUrl}${modelPath}`;
+      modelViewerElement.setAttribute("ios-src", fullUsdzPath);
+      console.log("Setting model-viewer ios-src for iOS to:", fullUsdzPath);
+    } else {
+      // Remove ios-src attribute if it exists and we're not on iOS
+      if (modelViewerElement.hasAttribute("ios-src")) {
+        modelViewerElement.removeAttribute("ios-src");
+      }
     }
 
     // Handle the AR URL parameter
