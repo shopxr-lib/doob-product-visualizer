@@ -33,7 +33,7 @@ const Plop = () => {
   return (
     <ProductProvider initialProduct="plop">
       <div
-        className="w-full overflow-hidden relative bg-gray-200"
+        className="w-full overflow-hidden relative bg-gray-100"
         style={{ height: "calc(var(--vh, 1vh) * 100)" }}
       >
         {/* Full-screen product viewer */}

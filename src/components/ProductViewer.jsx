@@ -10,7 +10,7 @@ import "@google/model-viewer";
 // Model component that handles the actual 3D model
 const Model = ({ modelPath, showDimensions }) => {
   const { scene: originalScene } = useGLTF(modelPath);
-  const { dimensionUnit } = useProductContext();
+  const { dimensionUnit, setIsLoading } = useProductContext();
   const modelRef = useRef();
   const [modelDimensions, setModelDimensions] = useState(null);
   const firstLoadRef = useRef(true); // Track if it's first time model loading
@@ -18,6 +18,9 @@ const Model = ({ modelPath, showDimensions }) => {
   // Center the model and extract dimensions
   useEffect(() => {
     if (!originalScene) return;
+
+    // Signal that model has loaded
+    setIsLoading(false);
 
     const clone = originalScene.clone(true);
     let finalBox = new THREE.Box3();
@@ -283,6 +286,15 @@ const ProductViewer = () => {
   const modelPath = getCurrentModelPath();
   console.log("modelPath:", modelPath);
 
+  // Set loading state to true initially when model path changes
+  useEffect(() => {
+    // Set loading state when model path changes
+    setIsLoading(true);
+
+    // Create a preloader to load the model if it's not in the cache
+    useGLTF.preload(modelPath);
+  }, [modelPath, setIsLoading]);
+
   //* Add model-viewer element for AR
   useEffect(() => {
     //* Helper function to detect iOS device
@@ -380,32 +392,33 @@ const ProductViewer = () => {
 
   return (
     <div className="absolute top-0 left-0 w-full h-full">
-      <Suspense fallback={<LoadingSpinner />}>
-        <Canvas
-          shadows
-          camera={{ position: [-1.5, 0.6, 3], fov: 40 }}
-          onCreated={() => setIsLoading(false)}
-          className="w-full h-full"
-        >
-          {/* Environment light */}
-          <Environment preset="apartment" />
+      <Canvas
+        shadows
+        camera={{ position: [-1.5, 0.6, 3], fov: 40 }}
+        className="w-full h-full"
+      >
+        {/* Environment light */}
+        <Environment preset="apartment" />
 
-          {/* Add some ambient and directional lighting */}
-          <ambientLight intensity={0.5} />
-          <directionalLight
-            position={[10, 10, 5]}
-            intensity={1}
-            castShadow
-            shadow-mapSize={[1024, 1024]}
-          />
+        {/* Add some ambient and directional lighting */}
+        <ambientLight intensity={0.5} />
+        <directionalLight
+          position={[10, 10, 5]}
+          intensity={1}
+          castShadow
+          shadow-mapSize={[1024, 1024]}
+        />
 
+        <Suspense fallback={null}>
           {/* The 3D model */}
           <Model modelPath={modelPath} showDimensions={showDimensions} />
+        </Suspense>
 
-          {/* Camera controls */}
-          <ControlledOrbitControls />
-        </Canvas>
-      </Suspense>
+        {/* Camera controls */}
+        <ControlledOrbitControls />
+      </Canvas>
+
+      <LoadingSpinner />
     </div>
   );
 };
