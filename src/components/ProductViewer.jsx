@@ -303,6 +303,21 @@ const ProductViewer = () => {
       return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
     };
 
+    // Check if the model parameter is present in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const modelParam = urlParams.get("model");
+    const arMode = urlParams.get("ar");
+
+    // Use the model from URL parameter if available and we're in AR mode
+    let effectiveModelPath = modelPath;
+    if (arMode === "true" && modelParam) {
+      // If we have both AR mode and a model parameter, construct the path
+      // Get the directory part of the current model path
+      const directory = modelPath.substring(0, modelPath.lastIndexOf("/") + 1);
+      effectiveModelPath = directory + modelParam;
+      console.log("Using model from URL parameter:", effectiveModelPath);
+    }
+
     //* Create model-viewer element
     let modelViewerElement = document.querySelector("model-viewer");
     if (!modelViewerElement) {
@@ -356,7 +371,7 @@ const ProductViewer = () => {
     // For Android (or non-iOS) devices, use GLB
     if (!isIOSDevice) {
       // Always update the source when model changes for Android/other devices
-      const fullModelPath = `${baseUrl}${modelPath}`;
+      const fullModelPath = `${baseUrl}${effectiveModelPath}`;
       modelViewerElement.src = fullModelPath;
       console.log("Setting model-viewer src for Android to:", fullModelPath);
     }
@@ -364,11 +379,11 @@ const ProductViewer = () => {
     // For iOS devices, we need USDZ
     if (isIOSDevice) {
       // Create the USDZ path
-      const usdzPath = modelPath.replace(".glb", ".usdz");
+      const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
       const fullUsdzPath = `${baseUrl}${usdzPath}`;
 
       // For iOS, we set the src to GLB (for preview) but use ios-src for AR
-      modelViewerElement.src = `${baseUrl}${modelPath}`;
+      modelViewerElement.src = `${baseUrl}${effectiveModelPath}`;
       modelViewerElement.setAttribute("ios-src", fullUsdzPath);
       console.log("Setting model-viewer ios-src for iOS to:", fullUsdzPath);
     } else {
@@ -379,8 +394,7 @@ const ProductViewer = () => {
     }
 
     // Handle the AR URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const arMode = urlParams.get("ar");
+
     if (arMode === "true") {
       console.log("AR URL parameter detected");
       // We'll let the ARButton component handle actual AR activation
