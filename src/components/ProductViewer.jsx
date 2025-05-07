@@ -288,11 +288,22 @@ const ProductViewer = () => {
 
   // Set loading state to true initially when model path changes
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const modelParam = urlParams.get("model");
+    const arMode = urlParams.get("ar");
+    // Use the model from URL parameter if available and we're in AR mode
+    let effectiveModelPath = modelPath;
+    if (arMode === "true" && modelParam) {
+      try {
+        effectiveModelPath = decodeURIComponent(modelParam);
+        console.log("Using model from URL parameter:", effectiveModelPath);
+      } catch (error) {
+        console.error("Error decoding model path:", error);
+      }
+    }
     // Set loading state when model path changes
     setIsLoading(true);
-
-    // Create a preloader to load the model if it's not in the cache
-    useGLTF.preload(modelPath);
+    useGLTF.preload(effectiveModelPath);
   }, [modelPath, setIsLoading]);
 
   //* Add model-viewer element for AR
