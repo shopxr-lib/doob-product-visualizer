@@ -308,14 +308,22 @@ const ProductViewer = () => {
     const modelParam = urlParams.get("model");
     const arMode = urlParams.get("ar");
 
+    // Log the current state for debugging
+    console.log("Current application state:");
+    console.log("- Current model path:", modelPath);
+    console.log("- AR mode:", arMode === "true" ? "Yes" : "No");
+    console.log("- URL model param:", modelParam || "None");
+
     // Use the model from URL parameter if available and we're in AR mode
     let effectiveModelPath = modelPath;
     if (arMode === "true" && modelParam) {
-      // If we have both AR mode and a model parameter, construct the path
-      // Get the directory part of the current model path
-
-      effectiveModelPath = decodeURIComponent(modelParam);
-      console.log("Using model from URL parameter:", effectiveModelPath);
+      // Use the model path from the URL parameter for AR mode
+      try {
+        effectiveModelPath = decodeURIComponent(modelParam);
+        console.log("Using model from URL parameter:", effectiveModelPath);
+      } catch (error) {
+        console.error("Error decoding model path:", error);
+      }
     }
 
     //* Create model-viewer element
@@ -359,6 +367,14 @@ const ProductViewer = () => {
           console.log("AR Session Started");
         }
       });
+
+      modelViewerElement.addEventListener("load", () => {
+        console.log("Model loaded successfully in model-viewer");
+      });
+
+      modelViewerElement.addEventListener("error", (error) => {
+        console.error("Model-viewer error:", error);
+      });
     }
 
     // Detect device and set appropriate model format
@@ -368,30 +384,40 @@ const ProductViewer = () => {
     // Set the base URL for the model
     const baseUrl = "https://doob.shopxr.org";
 
-    // For Android (or non-iOS) devices, use GLB
-    if (!isIOSDevice) {
-      // Always update the source when model changes for Android/other devices
-      const fullModelPath = `${baseUrl}${effectiveModelPath}`;
-      modelViewerElement.src = fullModelPath;
-      console.log("Setting model-viewer src for Android to:", fullModelPath);
-    }
+    // IMPORTANT: Always force update the src attribute to ensure the model is refreshed
+    // This is critical to fix the model synchronization issue
+    const fullModelPath = `${baseUrl}${effectiveModelPath}`;
 
-    // For iOS devices, we need USDZ
-    if (isIOSDevice) {
-      // Create the USDZ path
-      const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
-      const fullUsdzPath = `${baseUrl}${usdzPath}`;
+    // Clear any previous model source first to force a refresh
+    modelViewerElement.removeAttribute("src");
 
-      // For iOS, we set the src to GLB (for preview) but use ios-src for AR
-      modelViewerElement.src = `${baseUrl}${effectiveModelPath}`;
-      modelViewerElement.setAttribute("ios-src", fullUsdzPath);
-      console.log("Setting model-viewer ios-src for iOS to:", fullUsdzPath);
-    } else {
-      // Remove ios-src attribute if it exists and we're not on iOS
-      if (modelViewerElement.hasAttribute("ios-src")) {
-        modelViewerElement.removeAttribute("ios-src");
+    // Small timeout to ensure the change takes effect
+    setTimeout(() => {
+      // For Android (or non-iOS) devices, use GLB
+      if (!isIOSDevice) {
+        console.log("Setting model-viewer src for Android to:", fullModelPath);
+        modelViewerElement.src = fullModelPath;
       }
-    }
+
+      // For iOS devices, we need USDZ
+      if (isIOSDevice) {
+        // Create the USDZ path
+        const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
+        const fullUsdzPath = `${baseUrl}${usdzPath}`;
+
+        // For iOS, set both src (for preview) and ios-src (for AR)
+        console.log("Setting model-viewer src for iOS to:", fullModelPath);
+        console.log("Setting model-viewer ios-src for iOS to:", fullUsdzPath);
+
+        modelViewerElement.src = fullModelPath;
+        modelViewerElement.setAttribute("ios-src", fullUsdzPath);
+      } else {
+        // Remove ios-src attribute if it exists and we're not on iOS
+        if (modelViewerElement.hasAttribute("ios-src")) {
+          modelViewerElement.removeAttribute("ios-src");
+        }
+      }
+    }, 50);
 
     // Handle the AR URL parameter
 

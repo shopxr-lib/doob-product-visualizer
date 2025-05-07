@@ -109,11 +109,14 @@ const ARButton = () => {
     setShowModal(false);
   };
 
-  //* Generate QR code URL with model parameter
+  //* Generate QR code URL with full model path
   const getQRCodeURL = () => {
     const baseURL = `${window.location.origin}${window.location.pathname}`;
-    // Add both ar=true and the current model name as URL parameters
-    return `${baseURL}?ar=true&model=${encodeURIComponent(modelPath)}`;
+    // Store the full model path as a URL parameter
+    const encodedPath = encodeURIComponent(modelPath);
+    // Include a timestamp to ensure URL is unique and not cached (important!)
+    const timestamp = Date.now();
+    return `${baseURL}?ar=true&model=${encodedPath}&t=${timestamp}`;
   };
 
   return (
