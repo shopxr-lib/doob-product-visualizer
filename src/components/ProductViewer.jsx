@@ -288,6 +288,7 @@ const ProductViewer = () => {
 
   // Compute effectiveModelPath for both canvas and model-viewer
   const [effectiveModelPath, setEffectiveModelPath] = useState(modelPath);
+  const [shouldClearURL, setShouldClearURL] = useState(false);
 
   // Set loading state to true initially when model path changes
   useEffect(() => {
@@ -319,6 +320,11 @@ const ProductViewer = () => {
             "Using model from session storage:",
             computedEffectiveModelPath
           );
+        } else {
+          console.warn(
+            "No model path found in session storage for modelId:",
+            modelId
+          );
         }
       } else if (modelParam) {
         // Fallback for backward compatibility
@@ -339,10 +345,9 @@ const ProductViewer = () => {
     // Create a preloader to load the model if it's not in the cache
     useGLTF.preload(computedEffectiveModelPath);
 
-    // Clear URL parameters after model is loaded
+    // Defer URL clearing until model-viewer is loaded
     if (arMode || modelId || modelParam) {
-      const newUrl = `${window.location.pathname}`;
-      window.history.replaceState({}, document.title, newUrl);
+      setShouldClearURL(true);
     }
   }, [modelPath, setIsLoading]);
 
@@ -429,6 +434,12 @@ const ProductViewer = () => {
 
     const handleLoad = () => {
       console.log("Model loaded successfully in model-viewer");
+      // Clear URL parameters after model-viewer is loaded
+      if (shouldClearURL) {
+        const newUrl = `${window.location.pathname}`;
+        window.history.replaceState({}, document.title, newUrl);
+        setShouldClearURL(false);
+      }
     };
 
     const handleError = (error) => {
@@ -445,7 +456,7 @@ const ProductViewer = () => {
       modelViewerElement.removeEventListener("load", handleLoad);
       modelViewerElement.removeEventListener("error", handleError);
     };
-  }, [effectiveModelPath]);
+  }, [effectiveModelPath, shouldClearURL]);
 
   return (
     <div className="absolute top-0 left-0 w-full h-full">

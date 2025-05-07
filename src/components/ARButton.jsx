@@ -25,7 +25,14 @@ const ARButton = () => {
     };
 
     checkMobile();
+    window.addEventListener("resize", checkMobile);
 
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, []);
+
+  useEffect(() => {
     const handleARStatus = (event) => {
       const status = event.detail.status;
       if (status === "session-started") {
@@ -36,7 +43,7 @@ const ARButton = () => {
     };
 
     // Check if AR is supported
-    const checkARSupport = () => {
+    const checkARSupportAndActivate = () => {
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
         setIsARSupported(!!modelViewer.canActivateAR);
@@ -45,17 +52,22 @@ const ARButton = () => {
         // Automatically trigger AR if URL parameter is present
         const urlParams = new URLSearchParams(window.location.search);
         const arMode = urlParams.get("ar");
-        if (arMode === "true" && isMobile) {
-          console.log("Auto-activating AR from URL param");
-          if (!isArActive) {
-            setTimeout(() => {
-              try {
-                modelViewer.activateAR();
-              } catch (error) {
-                console.error("Error auto-activating AR:", error);
+        if (arMode === "true" && isMobile && !isArActive) {
+          console.log("Attempting to auto-activate AR from URL param");
+          setTimeout(() => {
+            try {
+              if (!modelViewer.canActivateAR) {
+                console.warn("AR not supported on this device");
+                return;
               }
-            }, 1500);
-          }
+              modelViewer.activateAR();
+              console.log("AR activation triggered");
+            } catch (error) {
+              console.error("Error auto-activating AR:", error);
+            }
+          }, 2000); // Increased delay to ensure model-viewer is ready
+        } else {
+          console.warn("model-viewer element not found");
         }
       }
     };
@@ -64,8 +76,7 @@ const ARButton = () => {
     const modelViewerElement = document.querySelector("model-viewer");
     if (modelViewerElement) {
       // Wait for model-viewer to load before checking AR support
-      modelViewerElement.addEventListener("load", checkARSupport);
-
+      modelViewerElement.addEventListener("load", checkARSupportAndActivate);
       modelViewerElement.addEventListener("ar-status", handleARStatus);
     }
 
@@ -73,24 +84,24 @@ const ARButton = () => {
     const checkInterval = setInterval(() => {
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer && !modelViewer.hasAttribute("data-ar-checked")) {
-        clearInterval(checkInterval);
         modelViewer.setAttribute("data-ar-checked", "true");
-        checkARSupport();
+        modelViewer.addEventListener("load", checkARSupportAndActivate);
+        modelViewer.addEventListener("ar-status", handleARStatus);
+        checkARSupportAndActivate();
       }
     }, 500);
 
-    window.addEventListener("resize", checkMobile);
-
     return () => {
-      window.removeEventListener("resize", checkMobile);
       clearInterval(checkInterval);
-
-      // Clean up event listener
       if (modelViewerElement) {
-        modelViewerElement.removeEventListener("load", checkARSupport);
+        modelViewerElement.removeEventListener(
+          "load",
+          checkARSupportAndActivate
+        );
+        modelViewerElement.removeEventListener("ar-status", handleARStatus);
       }
     };
-  }, [isMobile]);
+  }, [isMobile, modelPath, isArActive]);
 
   const handleARClick = () => {
     if (isMobile) {
@@ -128,6 +139,12 @@ const ARButton = () => {
     const modelId = uuidv4();
     // Store the model path in session storage
     sessionStorage.setItem(`model_${modelId}`, modelPath);
+    console.log(
+      "Stored model path in sessionStorage:",
+      modelPath,
+      "for modelId:",
+      modelId
+    );
     // Include a timestamp to ensure URL is unique and not cached (important!)
     const timestamp = Date.now();
     return `${baseURL}?ar=true&modelId=${modelId}&t=${timestamp}`;
@@ -150,7 +167,7 @@ const ARButton = () => {
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
             <h3 className="text-xl font-semibold mb-4 text-center">
-              View in AR
+              View in AR Mode
             </h3>
             <p className="mb-4 text-center">
               Scan this QR code with your mobile device to view this product in
