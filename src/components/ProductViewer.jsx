@@ -366,16 +366,6 @@ const ProductViewer = () => {
     modelViewerElement.style.opacity = "0.01"; // Not fully invisible to ensure clickability
     modelViewerElement.style.pointerEvents = "auto";
 
-    // Remove existing event listeners to prevent duplicates
-    modelViewerElement.removeEventListener("ar-status", handleARStatus);
-    modelViewerElement.removeEventListener("load", handleLoad);
-    modelViewerElement.removeEventListener("error", handleError);
-
-    // Add event listeners
-    modelViewerElement.addEventListener("ar-status", handleARStatus);
-    modelViewerElement.addEventListener("load", handleLoad);
-    modelViewerElement.addEventListener("error", handleError);
-
     const handleARStatus = (event) => {
       console.log("AR Status:", event.detail.status);
       if (event.detail.status === "failed") {
@@ -392,6 +382,16 @@ const ProductViewer = () => {
     const handleError = (error) => {
       console.error("Model-viewer error:", error);
     };
+
+    // Remove existing event listeners to prevent duplicates
+    modelViewerElement.removeEventListener("ar-status", handleARStatus);
+    modelViewerElement.removeEventListener("load", handleLoad);
+    modelViewerElement.removeEventListener("error", handleError);
+
+    // Add event listeners
+    modelViewerElement.addEventListener("ar-status", handleARStatus);
+    modelViewerElement.addEventListener("load", handleLoad);
+    modelViewerElement.addEventListener("error", handleError);
 
     // Detect device and set appropriate model format
     const isIOSDevice = isIOS();
