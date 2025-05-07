@@ -338,51 +338,60 @@ const ProductViewer = () => {
     if (!modelViewerElement) {
       modelViewerElement = document.createElement("model-viewer");
       modelViewerElement.id = "ar-model-viewer";
-      modelViewerElement.setAttribute("ar", "");
-      modelViewerElement.setAttribute(
-        "ar-modes",
-        "webxr scene-viewer quick-look"
-      );
-      modelViewerElement.setAttribute("ar-scale", "fixed");
-      modelViewerElement.setAttribute("camera-controls", "");
-      modelViewerElement.setAttribute("auto-rotate", "false");
-
-      // Attributes to help with AR initialization
-      modelViewerElement.setAttribute("seamless-poster", "");
-      modelViewerElement.setAttribute("shadow-intensity", "1");
-      modelViewerElement.setAttribute("environment-image", "neutral");
-      modelViewerElement.setAttribute("ar-placement", "floor");
-
-      // Make sure it's clickable but not visible
-      modelViewerElement.style.display = "block";
-      modelViewerElement.style.width = "1px";
-      modelViewerElement.style.height = "1px";
-      modelViewerElement.style.position = "absolute";
-      modelViewerElement.style.bottom = "0";
-      modelViewerElement.style.right = "0";
-      modelViewerElement.style.opacity = "0.01"; // Not fully invisible to ensure clickability
-      modelViewerElement.style.pointerEvents = "auto";
-
       document.body.appendChild(modelViewerElement);
-
-      // Debug event listeners
-      modelViewerElement.addEventListener("ar-status", (event) => {
-        console.log("AR Status:", event.detail.status);
-        if (event.detail.status === "failed") {
-          console.error("AR Failed:", event.detail);
-        } else if (event.detail.status === "session-started") {
-          console.log("AR Session Started");
-        }
-      });
-
-      modelViewerElement.addEventListener("load", () => {
-        console.log("Model loaded successfully in model-viewer");
-      });
-
-      modelViewerElement.addEventListener("error", (error) => {
-        console.error("Model-viewer error:", error);
-      });
     }
+
+    modelViewerElement.setAttribute("ar", "");
+    modelViewerElement.setAttribute(
+      "ar-modes",
+      "webxr scene-viewer quick-look"
+    );
+    modelViewerElement.setAttribute("ar-scale", "fixed");
+    modelViewerElement.setAttribute("camera-controls", "");
+    modelViewerElement.setAttribute("auto-rotate", "false");
+
+    // Attributes to help with AR initialization
+    modelViewerElement.setAttribute("seamless-poster", "");
+    modelViewerElement.setAttribute("shadow-intensity", "1");
+    modelViewerElement.setAttribute("environment-image", "neutral");
+    modelViewerElement.setAttribute("ar-placement", "floor");
+
+    // Make sure it's clickable but not visible
+    modelViewerElement.style.display = "block";
+    modelViewerElement.style.width = "1px";
+    modelViewerElement.style.height = "1px";
+    modelViewerElement.style.position = "absolute";
+    modelViewerElement.style.bottom = "0";
+    modelViewerElement.style.right = "0";
+    modelViewerElement.style.opacity = "0.01"; // Not fully invisible to ensure clickability
+    modelViewerElement.style.pointerEvents = "auto";
+
+    // Remove existing event listeners to prevent duplicates
+    modelViewerElement.removeEventListener("ar-status", handleARStatus);
+    modelViewerElement.removeEventListener("load", handleLoad);
+    modelViewerElement.removeEventListener("error", handleError);
+
+    // Add event listeners
+    modelViewerElement.addEventListener("ar-status", handleARStatus);
+    modelViewerElement.addEventListener("load", handleLoad);
+    modelViewerElement.addEventListener("error", handleError);
+
+    const handleARStatus = (event) => {
+      console.log("AR Status:", event.detail.status);
+      if (event.detail.status === "failed") {
+        console.error("AR Failed:", event.detail);
+      } else if (event.detail.status === "session-started") {
+        console.log("AR Session Started");
+      }
+    };
+
+    const handleLoad = () => {
+      console.log("Model loaded successfully in model-viewer");
+    };
+
+    const handleError = (error) => {
+      console.error("Model-viewer error:", error);
+    };
 
     // Detect device and set appropriate model format
     const isIOSDevice = isIOS();
@@ -390,44 +399,34 @@ const ProductViewer = () => {
 
     // Set the base URL for the model
     const baseUrl = "https://doob.shopxr.org";
-
-    // IMPORTANT: Always force update the src attribute to ensure the model is refreshed
-    // This is critical to fix the model synchronization issue
     const fullModelPath = `${baseUrl}${effectiveModelPath}`;
 
-    // Clear any previous model source first to force a refresh
+    // Clear previous attributes
     modelViewerElement.removeAttribute("src");
+    modelViewerElement.removeAttribute("ios-src");
 
-    // Small timeout to ensure the change takes effect
-    setTimeout(() => {
-      // For Android (or non-iOS) devices, use GLB
-      if (!isIOSDevice) {
-        console.log("Setting model-viewer src for Android to:", fullModelPath);
-        modelViewerElement.src = fullModelPath;
-      }
+    // Set model paths
+    modelViewerElement.src = fullModelPath;
+    console.log("Setting model-viewer src to:", fullModelPath);
 
-      // For iOS devices, we need USDZ
-      if (isIOSDevice) {
-        // Create the USDZ path
-        const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
-        const fullUsdzPath = `${baseUrl}${usdzPath}`;
+    // For iOS devices, we need USDZ
+    if (isIOSDevice) {
+      // Create the USDZ path
+      const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
+      const fullUsdzPath = `${baseUrl}${usdzPath}`;
+      modelViewerElement.setAttribute("ios-src", fullUsdzPath);
 
-        // For iOS, set both src (for preview) and ios-src (for AR)
-        console.log("Setting model-viewer src for iOS to:", fullModelPath);
-        console.log("Setting model-viewer ios-src for iOS to:", fullUsdzPath);
+      // For iOS, set both src (for preview) and ios-src (for AR)
+      console.log("Setting model-viewer src for iOS to:", fullModelPath);
+      console.log("Setting model-viewer ios-src for iOS to:", fullUsdzPath);
+    }
 
-        modelViewerElement.src = fullModelPath;
-        modelViewerElement.setAttribute("ios-src", fullUsdzPath);
-      } else {
-        // Remove ios-src attribute if it exists and we're not on iOS
-        if (modelViewerElement.hasAttribute("ios-src")) {
-          modelViewerElement.removeAttribute("ios-src");
-        }
-      }
-    }, 50);
-
-    return () => {};
-  }, [modelPath]);
+    return () => {
+      modelViewerElement.removeEventListener("ar-status", handleARStatus);
+      modelViewerElement.removeEventListener("load", handleLoad);
+      modelViewerElement.removeEventListener("error", handleError);
+    };
+  }, [effectiveModelPath]);
 
   return (
     <div className="absolute top-0 left-0 w-full h-full">
