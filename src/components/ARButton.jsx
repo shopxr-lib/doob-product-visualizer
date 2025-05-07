@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useProductContext } from "../context/ProductContext";
 import QRCode from "react-qr-code";
+import { v4 as uuidv4 } from "uuid";
 
 const ARButton = () => {
   const [showModal, setShowModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isARSupported, setIsARSupported] = useState(false);
   const { getCurrentModelPath } = useProductContext();
+  const [isArActive, setIsArActive] = useState(false);
 
   const modelPath = getCurrentModelPath();
   const modelName = modelPath.split("/").pop();
@@ -24,10 +26,14 @@ const ARButton = () => {
 
     checkMobile();
 
-    //* Check for URL parameters on component mount
-    const urlParams = new URLSearchParams(window.location.search);
-    const arMode = urlParams.get("ar");
-    const modelParam = urlParams.get("model");
+    const handleARStatus = (event) => {
+      const status = event.detail.status;
+      if (status === "session-started") {
+        setIsArActive(true);
+      } else if (status === "not-presenting") {
+        setIsArActive(false);
+      }
+    };
 
     // Check if AR is supported
     const checkARSupport = () => {
@@ -37,15 +43,19 @@ const ARButton = () => {
         console.log("AR supported:", !!modelViewer.canActivateAR);
 
         // Automatically trigger AR if URL parameter is present
+        const urlParams = new URLSearchParams(window.location.search);
+        const arMode = urlParams.get("ar");
         if (arMode === "true" && isMobile) {
           console.log("Auto-activating AR from URL param");
-          setTimeout(() => {
-            try {
-              modelViewer.activateAR();
-            } catch (error) {
-              console.error("Error auto-activating AR:", error);
-            }
-          }, 1500);
+          if (!isArActive) {
+            setTimeout(() => {
+              try {
+                modelViewer.activateAR();
+              } catch (error) {
+                console.error("Error auto-activating AR:", error);
+              }
+            }, 1500);
+          }
         }
       }
     };
@@ -55,6 +65,8 @@ const ARButton = () => {
     if (modelViewerElement) {
       // Wait for model-viewer to load before checking AR support
       modelViewerElement.addEventListener("load", checkARSupport);
+
+      modelViewerElement.addEventListener("ar-status", handleARStatus);
     }
 
     // Set up interval to check for model-viewer in case it's not loaded yet
@@ -112,11 +124,13 @@ const ARButton = () => {
   //* Generate QR code URL with full model path
   const getQRCodeURL = () => {
     const baseURL = `${window.location.origin}${window.location.pathname}`;
-    // Store the full model path as a URL parameter
-    const encodedPath = encodeURIComponent(modelPath);
+    // Generate a unique ID for the model
+    const modelId = uuidv4();
+    // Store the model path in session storage
+    sessionStorage.setItem(`model_${modelId}`, modelPath);
     // Include a timestamp to ensure URL is unique and not cached (important!)
     const timestamp = Date.now();
-    return `${baseURL}?ar=true&model=${encodedPath}&t=${timestamp}`;
+    return `${baseURL}?ar=true&modelId=${modelId}&t=${timestamp}`;
   };
 
   return (
@@ -136,7 +150,7 @@ const ARButton = () => {
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
             <h3 className="text-xl font-semibold mb-4 text-center">
-              View in AR Mode
+              View in AR
             </h3>
             <p className="mb-4 text-center">
               Scan this QR code with your mobile device to view this product in

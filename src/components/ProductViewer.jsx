@@ -298,24 +298,39 @@ const ProductViewer = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const modelParam = urlParams.get("model");
     const arMode = urlParams.get("ar");
+    const modelId = urlParams.get("modelId");
 
     // Log the current state for debugging
     console.log("Current application state:");
     console.log("- Current model path:", modelPath);
     console.log("- AR mode:", arMode === "true" ? "Yes" : "No");
     console.log("- URL model param:", modelParam || "None");
+    console.log("- URL modelId:", modelId || "None");
 
     // Use the model from URL parameter if available and we're in AR mode
     let computedEffectiveModelPath = modelPath;
-    if (arMode === "true" && modelParam) {
-      try {
-        computedEffectiveModelPath = decodeURIComponent(modelParam);
-        console.log(
-          "Using model from URL parameter:",
-          computedEffectiveModelPath
-        );
-      } catch (error) {
-        console.error("Error decoding model path:", error);
+    if (arMode === "true") {
+      if (modelId) {
+        // Retrieve model path from session storage
+        const storedModelPath = sessionStorage.getItem(`model_${modelId}`);
+        if (storedModelPath) {
+          computedEffectiveModelPath = storedModelPath;
+          console.log(
+            "Using model from session storage:",
+            computedEffectiveModelPath
+          );
+        }
+      } else if (modelParam) {
+        // Fallback for backward compatibility
+        try {
+          computedEffectiveModelPath = decodeURIComponent(modelParam);
+          console.log(
+            "Using model from URL parameter:",
+            computedEffectiveModelPath
+          );
+        } catch (error) {
+          console.error("Error decoding model path:", error);
+        }
       }
     }
 
@@ -323,6 +338,12 @@ const ProductViewer = () => {
 
     // Create a preloader to load the model if it's not in the cache
     useGLTF.preload(computedEffectiveModelPath);
+
+    // Clear URL parameters after model is loaded
+    if (arMode || modelId || modelParam) {
+      const newUrl = `${window.location.pathname}`;
+      window.history.replaceState({}, document.title, newUrl);
+    }
   }, [modelPath, setIsLoading]);
 
   //* Add model-viewer element for AR
@@ -341,30 +362,61 @@ const ProductViewer = () => {
       document.body.appendChild(modelViewerElement);
     }
 
-    modelViewerElement.setAttribute("ar", "");
-    modelViewerElement.setAttribute(
-      "ar-modes",
-      "webxr scene-viewer quick-look"
-    );
-    modelViewerElement.setAttribute("ar-scale", "fixed");
-    modelViewerElement.setAttribute("camera-controls", "");
-    modelViewerElement.setAttribute("auto-rotate", "false");
+    // Track initialization state
+    const isInitialized = modelViewerElement.hasAttribute("data-initialized");
+    const currentSrc = modelViewerElement.getAttribute("src");
 
-    // Attributes to help with AR initialization
-    modelViewerElement.setAttribute("seamless-poster", "");
-    modelViewerElement.setAttribute("shadow-intensity", "1");
-    modelViewerElement.setAttribute("environment-image", "neutral");
-    modelViewerElement.setAttribute("ar-placement", "floor");
+    if (
+      !isInitialized ||
+      currentSrc !== `https://doob.shopxr.org${effectiveModelPath}`
+    ) {
+      // Always reset src and ios-src to ensure new model loads
+      modelViewerElement.removeAttribute("src");
+      modelViewerElement.removeAttribute("ios-src");
 
-    // Make sure it's clickable but not visible
-    modelViewerElement.style.display = "block";
-    modelViewerElement.style.width = "1px";
-    modelViewerElement.style.height = "1px";
-    modelViewerElement.style.position = "absolute";
-    modelViewerElement.style.bottom = "0";
-    modelViewerElement.style.right = "0";
-    modelViewerElement.style.opacity = "0.01"; // Not fully invisible to ensure clickability
-    modelViewerElement.style.pointerEvents = "auto";
+      modelViewerElement.setAttribute("ar", "");
+      modelViewerElement.setAttribute(
+        "ar-modes",
+        "webxr scene-viewer quick-look"
+      );
+      modelViewerElement.setAttribute("ar-scale", "fixed");
+      modelViewerElement.setAttribute("camera-controls", "");
+      modelViewerElement.setAttribute("auto-rotate", "false");
+
+      // Attributes to help with AR initialization
+      modelViewerElement.setAttribute("seamless-poster", "");
+      modelViewerElement.setAttribute("shadow-intensity", "1");
+      modelViewerElement.setAttribute("environment-image", "neutral");
+      modelViewerElement.setAttribute("ar-placement", "floor");
+
+      // Make sure it's clickable but not visible
+      modelViewerElement.style.display = "block";
+      modelViewerElement.style.width = "1px";
+      modelViewerElement.style.height = "1px";
+      modelViewerElement.style.position = "absolute";
+      modelViewerElement.style.bottom = "0";
+      modelViewerElement.style.right = "0";
+      modelViewerElement.style.opacity = "0.01"; // Not fully invisible to ensure clickability
+      modelViewerElement.style.pointerEvents = "auto";
+
+      // Set the base URL for the model
+      const baseUrl = "https://doob.shopxr.org";
+      const fullModelPath = `${baseUrl}${effectiveModelPath}`;
+
+      // Set model paths
+      modelViewerElement.src = fullModelPath;
+      console.log("Setting model-viewer src to:", fullModelPath);
+
+      // For iOS devices, we need USDZ
+      if (isIOS()) {
+        // Create the USDZ path
+        const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
+        const fullUsdzPath = `${baseUrl}${usdzPath}`;
+        modelViewerElement.setAttribute("ios-src", fullUsdzPath);
+      }
+
+      modelViewerElement.setAttribute("data-initialized", "true");
+    }
 
     const handleARStatus = (event) => {
       console.log("AR Status:", event.detail.status);
@@ -383,43 +435,10 @@ const ProductViewer = () => {
       console.error("Model-viewer error:", error);
     };
 
-    // Remove existing event listeners to prevent duplicates
-    modelViewerElement.removeEventListener("ar-status", handleARStatus);
-    modelViewerElement.removeEventListener("load", handleLoad);
-    modelViewerElement.removeEventListener("error", handleError);
-
     // Add event listeners
     modelViewerElement.addEventListener("ar-status", handleARStatus);
     modelViewerElement.addEventListener("load", handleLoad);
     modelViewerElement.addEventListener("error", handleError);
-
-    // Detect device and set appropriate model format
-    const isIOSDevice = isIOS();
-    console.log("Device detection: iOS =", isIOSDevice);
-
-    // Set the base URL for the model
-    const baseUrl = "https://doob.shopxr.org";
-    const fullModelPath = `${baseUrl}${effectiveModelPath}`;
-
-    // Clear previous attributes
-    modelViewerElement.removeAttribute("src");
-    modelViewerElement.removeAttribute("ios-src");
-
-    // Set model paths
-    modelViewerElement.src = fullModelPath;
-    console.log("Setting model-viewer src to:", fullModelPath);
-
-    // For iOS devices, we need USDZ
-    if (isIOSDevice) {
-      // Create the USDZ path
-      const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
-      const fullUsdzPath = `${baseUrl}${usdzPath}`;
-      modelViewerElement.setAttribute("ios-src", fullUsdzPath);
-
-      // For iOS, set both src (for preview) and ios-src (for AR)
-      console.log("Setting model-viewer src for iOS to:", fullModelPath);
-      console.log("Setting model-viewer ios-src for iOS to:", fullUsdzPath);
-    }
 
     return () => {
       modelViewerElement.removeEventListener("ar-status", handleARStatus);
