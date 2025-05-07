@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useProductContext } from "../context/ProductContext";
 import QRCode from "react-qr-code";
-import { v4 as uuidv4 } from "uuid";
 
 const ARButton = () => {
   const [showModal, setShowModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isARSupported, setIsARSupported] = useState(false);
   const { getCurrentModelPath } = useProductContext();
-  const [isArActive, setIsArActive] = useState(false);
+  const [hasAttemptedARActivation, setHasAttemptedARActivation] =
+    useState(false);
 
   const modelPath = getCurrentModelPath();
   const modelName = modelPath.split("/").pop();
@@ -32,62 +32,67 @@ const ARButton = () => {
     };
   }, []);
 
+  //* Handle AR activation
   useEffect(() => {
-    const handleARStatus = (event) => {
-      const status = event.detail.status;
-      console.log("AR Status Update:", status);
-      if (status === "session-started") {
-        setIsArActive(true);
-      } else if (status === "not-presenting") {
-        setIsArActive(false);
-      }
-    };
+    const urlParams = new URLSearchParams(window.location.search);
+    const arMode = urlParams.get("ar");
 
-    // Check if AR is supported
+    //* Check if AR is supported
     const checkARSupportAndActivate = () => {
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
         setIsARSupported(!!modelViewer.canActivateAR);
         console.log("AR supported:", !!modelViewer.canActivateAR);
 
-        // Automatically trigger AR if URL parameter is present
-        const urlParams = new URLSearchParams(window.location.search);
-        const arMode = urlParams.get("ar");
-        if (arMode === "true" && isMobile && !isArActive) {
+        if (arMode === "true" && isMobile && !hasAttemptedARActivation) {
           console.log("Attempting to auto-activate AR from URL param");
+          setHasAttemptedARActivation(true); // Prevent multiple attempts
           setTimeout(() => {
             try {
               if (!modelViewer.canActivateAR) {
                 console.warn("AR not supported on this device");
                 return;
               }
+              console.log("Triggering AR activation");
               modelViewer.activateAR();
-              console.log("AR activation triggered");
             } catch (error) {
               console.error("Error auto-activating AR:", error);
             }
-          }, 2000); // Increased delay to ensure model-viewer is ready
-        } else {
-          console.warn("model-viewer element not found");
+          }, 2500); // Increased delay to ensure model-viewer is ready
         }
+      } else {
+        console.warn("model-viewer element not found");
+      }
+    };
+
+    const handleARStatus = (event) => {
+      const status = event.detail.status;
+      console.log("AR Status Update:", status);
+      if (status === "failed") {
+        console.error("AR Failed:", event.detail);
+      } else if (status === "session-started") {
+        console.log("AR Session Started");
       }
     };
 
     // Check for model-viewer and set up event listener
-    const modelViewerElement = document.querySelector("model-viewer");
+    let modelViewerElement = document.querySelector("model-viewer");
     if (modelViewerElement) {
       // Wait for model-viewer to load before checking AR support
       modelViewerElement.addEventListener("load", checkARSupportAndActivate);
       modelViewerElement.addEventListener("ar-status", handleARStatus);
     }
 
-    // Set up interval to check for model-viewer in case it's not loaded yet
+    // Poll for model-viewer if not yet available
     const checkInterval = setInterval(() => {
-      const modelViewer = document.querySelector("model-viewer");
-      if (modelViewer && !modelViewer.hasAttribute("data-ar-checked")) {
-        modelViewer.setAttribute("data-ar-checked", "true");
-        modelViewer.addEventListener("load", checkARSupportAndActivate);
-        modelViewer.addEventListener("ar-status", handleARStatus);
+      modelViewerElement = document.querySelector("model-viewer");
+      if (
+        modelViewerElement &&
+        !modelViewerElement.hasAttribute("data-ar-checked")
+      ) {
+        modelViewerElement.setAttribute("data-ar-checked", "true");
+        modelViewerElement.addEventListener("load", checkARSupportAndActivate);
+        modelViewerElement.addEventListener("ar-status", handleARStatus);
         checkARSupportAndActivate();
       }
     }, 500);
@@ -102,7 +107,7 @@ const ARButton = () => {
         modelViewerElement.removeEventListener("ar-status", handleARStatus);
       }
     };
-  }, [isMobile, modelPath, isArActive]);
+  }, [isMobile, modelPath, hasAttemptedARActivation]);
 
   const handleARClick = () => {
     if (isMobile) {
@@ -160,7 +165,7 @@ const ARButton = () => {
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
             <h3 className="text-xl font-semibold mb-4 text-center">
-              View in AR
+              View in AR Mode
             </h3>
             <p className="mb-4 text-center">
               Scan this QR code with your mobile device to view this product in
