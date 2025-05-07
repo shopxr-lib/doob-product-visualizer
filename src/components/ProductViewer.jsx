@@ -313,8 +313,8 @@ const ProductViewer = () => {
     if (arMode === "true" && modelParam) {
       // If we have both AR mode and a model parameter, construct the path
       // Get the directory part of the current model path
-      const directory = modelPath.substring(0, modelPath.lastIndexOf("/") + 1);
-      effectiveModelPath = directory + modelParam;
+
+      effectiveModelPath = decodeURIComponent(modelParam);
       console.log("Using model from URL parameter:", effectiveModelPath);
     }
 

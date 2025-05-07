@@ -113,7 +113,7 @@ const ARButton = () => {
   const getQRCodeURL = () => {
     const baseURL = `${window.location.origin}${window.location.pathname}`;
     // Add both ar=true and the current model name as URL parameters
-    return `${baseURL}?ar=true&model=${encodeURIComponent(modelName)}`;
+    return `${baseURL}?ar=true&model=${encodeURIComponent(modelPath)}`;
   };
 
   return (
