@@ -70,7 +70,7 @@ const Model = ({ modelPath, showDimensions }) => {
           modelRef.current.rotation,
           { y: 0 },
           {
-            y: Math.PI * 2,
+            y: Math.PI * -2,
             duration: 1.2,
             ease: "power1.out",
             onComplete: () => {
@@ -286,22 +286,13 @@ const ProductViewer = () => {
   const modelPath = getCurrentModelPath();
   console.log("modelPath:", modelPath);
 
+  // Compute effectiveModelPath for both canvas and model-viewer
+  const [effectiveModelPath, setEffectiveModelPath] = useState(modelPath);
+
   // Set loading state to true initially when model path changes
   useEffect(() => {
     // Set loading state when model path changes
     setIsLoading(true);
-
-    // Create a preloader to load the model if it's not in the cache
-    useGLTF.preload(modelPath);
-  }, [modelPath, setIsLoading]);
-
-  //* Add model-viewer element for AR
-  useEffect(() => {
-    //* Helper function to detect iOS device
-    const isIOS = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-      return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-    };
 
     // Check if the model parameter is present in the URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -315,16 +306,32 @@ const ProductViewer = () => {
     console.log("- URL model param:", modelParam || "None");
 
     // Use the model from URL parameter if available and we're in AR mode
-    let effectiveModelPath = modelPath;
+    let computedEffectiveModelPath = modelPath;
     if (arMode === "true" && modelParam) {
-      // Use the model path from the URL parameter for AR mode
       try {
-        effectiveModelPath = decodeURIComponent(modelParam);
-        console.log("Using model from URL parameter:", effectiveModelPath);
+        computedEffectiveModelPath = decodeURIComponent(modelParam);
+        console.log(
+          "Using model from URL parameter:",
+          computedEffectiveModelPath
+        );
       } catch (error) {
         console.error("Error decoding model path:", error);
       }
     }
+
+    setEffectiveModelPath(computedEffectiveModelPath);
+
+    // Create a preloader to load the model if it's not in the cache
+    useGLTF.preload(computedEffectiveModelPath);
+  }, [modelPath, setIsLoading]);
+
+  //* Add model-viewer element for AR
+  useEffect(() => {
+    //* Helper function to detect iOS device
+    const isIOS = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+    };
 
     //* Create model-viewer element
     let modelViewerElement = document.querySelector("model-viewer");
@@ -419,14 +426,6 @@ const ProductViewer = () => {
       }
     }, 50);
 
-    // Handle the AR URL parameter
-
-    if (arMode === "true") {
-      console.log("AR URL parameter detected");
-      // We'll let the ARButton component handle actual AR activation
-      // to ensure the model is fully loaded first
-    }
-
     return () => {};
   }, [modelPath]);
 
@@ -451,7 +450,10 @@ const ProductViewer = () => {
 
         <Suspense fallback={null}>
           {/* The 3D model */}
-          <Model modelPath={modelPath} showDimensions={showDimensions} />
+          <Model
+            modelPath={effectiveModelPath}
+            showDimensions={showDimensions}
+          />
         </Suspense>
 
         {/* Camera controls */}
