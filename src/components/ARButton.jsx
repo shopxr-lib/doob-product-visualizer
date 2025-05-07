@@ -35,6 +35,7 @@ const ARButton = () => {
   useEffect(() => {
     const handleARStatus = (event) => {
       const status = event.detail.status;
+      console.log("AR Status Update:", status);
       if (status === "session-started") {
         setIsArActive(true);
       } else if (status === "not-presenting") {
@@ -135,19 +136,11 @@ const ARButton = () => {
   //* Generate QR code URL with full model path
   const getQRCodeURL = () => {
     const baseURL = `${window.location.origin}${window.location.pathname}`;
-    // Generate a unique ID for the model
-    const modelId = uuidv4();
-    // Store the model path in session storage
-    sessionStorage.setItem(`model_${modelId}`, modelPath);
-    console.log(
-      "Stored model path in sessionStorage:",
-      modelPath,
-      "for modelId:",
-      modelId
-    );
+    // Encode model path in base64 to obfuscate it
+    const encodedModelPath = encodeURIComponent(btoa(modelPath));
     // Include a timestamp to ensure URL is unique and not cached (important!)
     const timestamp = Date.now();
-    return `${baseURL}?ar=true&modelId=${modelId}&t=${timestamp}`;
+    return `${baseURL}?ar=true&model=${encodedModelPath}&t=${timestamp}`;
   };
 
   return (
@@ -167,7 +160,7 @@ const ARButton = () => {
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
             <h3 className="text-xl font-semibold mb-4 text-center">
-              View in AR Mode
+              View in AR
             </h3>
             <p className="mb-4 text-center">
               Scan this QR code with your mobile device to view this product in

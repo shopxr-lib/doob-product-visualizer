@@ -311,8 +311,19 @@ const ProductViewer = () => {
     // Use the model from URL parameter if available and we're in AR mode
     let computedEffectiveModelPath = modelPath;
     if (arMode === "true") {
-      if (modelId) {
-        // Retrieve model path from session storage
+      if (modelParam) {
+        try {
+          // Decode base64-encoded model path
+          computedEffectiveModelPath = atob(decodeURIComponent(modelParam));
+          console.log(
+            "Using decoded model from URL parameter:",
+            computedEffectiveModelPath
+          );
+        } catch (error) {
+          console.error("Error decoding model path:", error);
+        }
+      } else if (modelId) {
+        // Fallback for older sessionStorage-based QR codes
         const storedModelPath = sessionStorage.getItem(`model_${modelId}`);
         if (storedModelPath) {
           computedEffectiveModelPath = storedModelPath;
@@ -325,17 +336,6 @@ const ProductViewer = () => {
             "No model path found in session storage for modelId:",
             modelId
           );
-        }
-      } else if (modelParam) {
-        // Fallback for backward compatibility
-        try {
-          computedEffectiveModelPath = decodeURIComponent(modelParam);
-          console.log(
-            "Using model from URL parameter:",
-            computedEffectiveModelPath
-          );
-        } catch (error) {
-          console.error("Error decoding model path:", error);
         }
       }
     }
