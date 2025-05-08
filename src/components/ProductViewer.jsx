@@ -359,6 +359,12 @@ const ProductViewer = () => {
       return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
     };
 
+    //* Helper function to detect Android device
+    const isAndroid = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      return /Android/.test(userAgent);
+    };
+
     //* Create model-viewer element
     let modelViewerElement = document.querySelector("model-viewer");
     if (!modelViewerElement) {
@@ -380,10 +386,14 @@ const ProductViewer = () => {
       modelViewerElement.removeAttribute("ios-src");
 
       modelViewerElement.setAttribute("ar", "");
-      modelViewerElement.setAttribute(
-        "ar-modes",
-        "webxr scene-viewer quick-look"
-      );
+      // Set AR modes based on device type
+      if (isIOS()) {
+        modelViewerElement.setAttribute("ar-modes", "webxr quick-look");
+      } else if (isAndroid()) {
+        modelViewerElement.setAttribute("ar-modes", "webxr");
+      } else {
+        modelViewerElement.setAttribute("ar-modes", "webxr");
+      }
       modelViewerElement.setAttribute("ar-scale", "fixed");
       modelViewerElement.setAttribute("camera-controls", "");
       modelViewerElement.setAttribute("auto-rotate", "false");
@@ -429,6 +439,10 @@ const ProductViewer = () => {
         console.error("AR Failed:", event.detail);
       } else if (event.detail.status === "session-started") {
         console.log("AR Session Started");
+      } else if (event.detail.status === "session-ended" && isAndroid()) {
+        console.log("AR Session Ended on Android");
+        // Ensure browser regains focus
+        window.focus();
       }
     };
 
