@@ -390,7 +390,7 @@ const ProductViewer = () => {
       if (isIOS()) {
         modelViewerElement.setAttribute("ar-modes", "webxr quick-look");
       } else if (isAndroid()) {
-        modelViewerElement.setAttribute("ar-modes", "webxr");
+        modelViewerElement.setAttribute("ar-modes", "webxr scene-viewer");
       } else {
         modelViewerElement.setAttribute("ar-modes", "webxr");
       }
@@ -434,15 +434,19 @@ const ProductViewer = () => {
     }
 
     const handleARStatus = (event) => {
-      console.log("AR Status:", event.detail.status);
+      console.log("AR Status:", event.detail.status, "Details:", event.detail);
       if (event.detail.status === "failed") {
         console.error("AR Failed:", event.detail);
       } else if (event.detail.status === "session-started") {
         console.log("AR Session Started");
-      } else if (event.detail.status === "session-ended" && isAndroid()) {
-        console.log("AR Session Ended on Android");
+      } else if (event.detail.status === "session-ended") {
+        console.log("AR Session Ended");
         // Ensure browser regains focus
         window.focus();
+        // Force a re-render to ensure 3D view is displayed
+        setTimeout(() => {
+          window.dispatchEvent(new Event("resize"));
+        }, 100);
       }
     };
 
@@ -465,10 +469,23 @@ const ProductViewer = () => {
     modelViewerElement.addEventListener("load", handleLoad);
     modelViewerElement.addEventListener("error", handleError);
 
+    // Handle visibility change to detect return from scene-viewer
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log("Page became visible, likely returned from scene-viewer");
+        window.focus();
+        setTimeout(() => {
+          window.dispatchEvent(new Event("resize"));
+        }, 100);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       modelViewerElement.removeEventListener("ar-status", handleARStatus);
       modelViewerElement.removeEventListener("load", handleLoad);
       modelViewerElement.removeEventListener("error", handleError);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [effectiveModelPath, shouldClearURL]);
 
