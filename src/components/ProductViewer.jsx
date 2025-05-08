@@ -386,14 +386,10 @@ const ProductViewer = () => {
       modelViewerElement.removeAttribute("ios-src");
 
       modelViewerElement.setAttribute("ar", "");
-      // Set AR modes based on device type
-      if (isIOS()) {
-        modelViewerElement.setAttribute("ar-modes", "webxr quick-look");
-      } else if (isAndroid()) {
-        modelViewerElement.setAttribute("ar-modes", "webxr scene-viewer");
-      } else {
-        modelViewerElement.setAttribute("ar-modes", "webxr");
-      }
+      modelViewerElement.setAttribute(
+        "ar-modes",
+        "webxr scene-viewer quick-look"
+      );
       modelViewerElement.setAttribute("ar-scale", "fixed");
       modelViewerElement.setAttribute("camera-controls", "");
       modelViewerElement.setAttribute("auto-rotate", "false");
@@ -430,6 +426,13 @@ const ProductViewer = () => {
         modelViewerElement.setAttribute("ios-src", fullUsdzPath);
       }
 
+      // For Android devices, set a return URL for scene-viewer
+      if (isAndroid()) {
+        const returnUrl = `${window.location.origin}${window.location.pathname}`;
+        modelViewerElement.setAttribute("link", returnUrl);
+        console.log("Setting scene-viewer return URL to:", returnUrl);
+      }
+
       modelViewerElement.setAttribute("data-initialized", "true");
     }
 
@@ -439,14 +442,6 @@ const ProductViewer = () => {
         console.error("AR Failed:", event.detail);
       } else if (event.detail.status === "session-started") {
         console.log("AR Session Started");
-      } else if (event.detail.status === "session-ended") {
-        console.log("AR Session Ended");
-        // Ensure browser regains focus
-        window.focus();
-        // Force a re-render to ensure 3D view is displayed
-        setTimeout(() => {
-          window.dispatchEvent(new Event("resize"));
-        }, 100);
       }
     };
 
@@ -469,23 +464,10 @@ const ProductViewer = () => {
     modelViewerElement.addEventListener("load", handleLoad);
     modelViewerElement.addEventListener("error", handleError);
 
-    // Handle visibility change to detect return from scene-viewer
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        console.log("Page became visible, likely returned from scene-viewer");
-        window.focus();
-        setTimeout(() => {
-          window.dispatchEvent(new Event("resize"));
-        }, 100);
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
     return () => {
       modelViewerElement.removeEventListener("ar-status", handleARStatus);
       modelViewerElement.removeEventListener("load", handleLoad);
       modelViewerElement.removeEventListener("error", handleError);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [effectiveModelPath, shouldClearURL]);
 
