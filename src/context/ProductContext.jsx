@@ -22,6 +22,51 @@ export const ProductProvider = ({ children, initialProduct = "plop" }) => {
   const [showColorDropdown, setShowColorDropdown] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
+  //* Initialize state from URL parameters if present
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const modelParam = urlParams.get("model");
+    const arMode = urlParams.get("ar");
+
+    if (arMode === "true" && modelParam) {
+      try {
+        // Decode base64-encoded model path
+        const modelPath = atob(decodeURIComponent(modelParam));
+
+        // Find matching product, size, and color by iterating through productsData
+        let foundProductId = null;
+        let foundSize = null;
+        let foundColor = null;
+
+        Object.entries(productsData).forEach(([productId, product]) => {
+          Object.entries(product.colors).forEach(([size, colors]) => {
+            colors.forEach((color) => {
+              const generatedPath = product.getModelPath(size, color);
+              if (generatedPath === modelPath) {
+                foundProductId = productId;
+                foundSize = size;
+                foundColor = color;
+              }
+            });
+          });
+        });
+
+        if (foundProductId && foundSize && foundColor) {
+          setCurrentProduct(foundProductId);
+          setSelectedSize(foundSize);
+          setSelectedColor(foundColor);
+        } else {
+          console.warn(
+            "Could not match modelPath to product, size, or color:",
+            modelPath
+          );
+        }
+      } catch (error) {
+        console.error("Error decoding model path from URL:", error);
+      }
+    }
+  }, []);
+
   //* Function to update the product
   const updateProduct = (productId) => {
     const newProductInfo = productsData[productId];
