@@ -1,4 +1,4 @@
-import { Suspense, useRef, useEffect, useState } from "react";
+import React, { Suspense, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Environment, useGLTF, Text } from "@react-three/drei";
 import { useProductContext } from "../context/ProductContext";
@@ -6,6 +6,58 @@ import LoadingSpinner from "./LoadingSpinner";
 import * as THREE from "three";
 import gsap from "gsap";
 import "@google/model-viewer";
+
+// FlatErrorText component to render flat 2D text
+const FlatErrorText = () => {
+  const { camera } = useThree();
+  const textRef = useRef();
+
+  useFrame(() => {
+    if (textRef.current) {
+      textRef.current.lookAt(camera.position); // Ensure text always faces the camera
+    }
+  });
+
+  return (
+    <Text
+      ref={textRef}
+      position={[0, 0, 0]} // Center the text in the scene
+      color="red"
+      fontSize={0.08}
+      anchorX="center"
+      anchorY="middle"
+      maxWidth={10} // Prevents stretching
+      rotation={[0, 0, 0]} // Reset rotation
+    >
+      Failed to load model. Please try another model.
+    </Text>
+  );
+};
+
+// ErrorBoundary component to catch and handle errors in the Model component
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    // Update state to render fallback UI
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log error details to console
+    console.error("Error in Model component:", error);
+    console.error("Error Info:", errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Fallback UI: Display error message in 3D scene
+      return <FlatErrorText />;
+    }
+
+    return this.props.children;
+  }
+}
 
 // Model component that handles the actual 3D model
 const Model = ({ modelPath, showDimensions }) => {
@@ -492,10 +544,12 @@ const ProductViewer = () => {
 
         <Suspense fallback={null}>
           {/* The 3D model */}
-          <Model
-            modelPath={effectiveModelPath}
-            showDimensions={showDimensions}
-          />
+          <ErrorBoundary>
+            <Model
+              modelPath={effectiveModelPath}
+              showDimensions={showDimensions}
+            />
+          </ErrorBoundary>
         </Suspense>
 
         {/* Camera controls */}
