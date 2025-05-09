@@ -491,7 +491,10 @@ const ProductViewer = () => {
         console.log("AR Status Change:", event.detail.status);
 
         // When AR session ends, ensure we don't close the browser
-        if (event.detail.status === "session-ended") {
+        if (
+          event.detail.status === "session-ended" ||
+          event.detail.status === "not-presenting"
+        ) {
           // For QR-code initiated sessions, this helps prevent browser closing
           console.log("AR session ended, ensuring browser stays open");
 
