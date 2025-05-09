@@ -480,10 +480,34 @@ const ProductViewer = () => {
 
       // For Android devices, set a return URL for scene-viewer
       if (isAndroid()) {
-        const returnUrl = `${window.location.origin}${window.location.pathname}`;
+        // Set the exact current URL as the return URL, preserving all parameters
+        const returnUrl = window.location.href;
         modelViewerElement.setAttribute("link", returnUrl);
         console.log("Setting scene-viewer return URL to:", returnUrl);
       }
+
+      // Add event listeners for AR sessions
+      const handleARStatusChange = (event) => {
+        console.log("AR Status Change:", event.detail.status);
+
+        // When AR session ends, ensure we don't close the browser
+        if (event.detail.status === "session-ended") {
+          // For QR-code initiated sessions, this helps prevent browser closing
+          console.log("AR session ended, ensuring browser stays open");
+
+          // Remove AR mode from URL without reloading the page
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.has("ar")) {
+            urlParams.delete("ar");
+            const newUrl =
+              window.location.pathname +
+              (urlParams.toString() ? "?" + urlParams.toString() : "");
+            window.history.replaceState({}, document.title, newUrl);
+          }
+        }
+      };
+
+      modelViewerElement.addEventListener("ar-status", handleARStatusChange);
 
       modelViewerElement.setAttribute("data-initialized", "true");
     }
@@ -501,9 +525,14 @@ const ProductViewer = () => {
       console.log("Model loaded successfully in model-viewer");
       // Clear URL parameters after model-viewer is loaded
       if (shouldClearURL) {
-        const newUrl = `${window.location.pathname}`;
-        window.history.replaceState({}, document.title, newUrl);
-        setShouldClearURL(false);
+        // Don't clear URL immediately if in AR mode - we need to keep those params
+        // until AR session is complete
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.get("ar")) {
+          const newUrl = `${window.location.pathname}`;
+          window.history.replaceState({}, document.title, newUrl);
+          setShouldClearURL(false);
+        }
       }
     };
 

@@ -54,6 +54,30 @@ const ARButton = () => {
                 return;
               }
               console.log("Triggering AR activation");
+
+              // *** SOLUTION FOR ISSUE #2: BROWSER RETURNING TO PAGE ***
+              // Store the current URL to ensure we can return to it
+              const currentUrl = window.location.href;
+              sessionStorage.setItem("arReturnUrl", currentUrl);
+
+              // Add event listener for AR session end to handle return
+              const handleARSessionEnd = () => {
+                console.log("AR session ended, ensuring browser remains open");
+                modelViewer.removeEventListener("ar-status", arStatusListener);
+              };
+
+              const arStatusListener = (event) => {
+                if (
+                  event.detail.status === "session-ended" ||
+                  event.detail.status === "failed"
+                ) {
+                  handleARSessionEnd();
+                }
+              };
+
+              modelViewer.addEventListener("ar-status", arStatusListener);
+
+              // Now activate AR
               modelViewer.activateAR();
             } catch (error) {
               console.error("Error auto-activating AR:", error);
@@ -72,6 +96,14 @@ const ARButton = () => {
         console.error("AR Failed:", event.detail);
       } else if (status === "session-started") {
         console.log("AR Session Started");
+      } else if (status === "session-ended") {
+        // Clear the AR mode parameter without reloading the page
+        // This helps prevent issues if the user refreshes
+        if (arMode === "true") {
+          // Remove the AR flag from URL without page reload
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        }
       }
     };
 
@@ -165,7 +197,7 @@ const ARButton = () => {
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
             <h3 className="text-xl font-semibold mb-4 text-center">
-              View in AR
+              View in AR Mode
             </h3>
             <p className="mb-4 text-center">
               Scan this QR code with your mobile device to view this product in
