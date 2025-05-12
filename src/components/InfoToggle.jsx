@@ -1,4 +1,3 @@
-// src/components/InfoToggle.jsx
 import { useState } from "react";
 import { BsQuestionCircle } from "react-icons/bs";
 import { useProductContext } from "../context/ProductContext";

@@ -16,7 +16,7 @@ const useModelLoader = (modelPath) => {
     },
     (xhr) => {
       //* Loading progress callback
-      console.log(`${(xhr.loaded / xhr.total) * 100}% loaded.`);
+      // console.log(`${(xhr.loaded / xhr.total) * 100}% loaded.`);
     }
   );
 

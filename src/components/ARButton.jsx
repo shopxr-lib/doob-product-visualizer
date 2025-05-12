@@ -11,8 +11,7 @@ const ARButton = () => {
     useState(false);
 
   const modelPath = getCurrentModelPath();
-  const modelName = modelPath.split("/").pop();
-  console.log("model path ar button", modelPath);
+  // console.log("model path ar button", modelPath);
 
   //* Check if the device is mobile
   useEffect(() => {
@@ -42,10 +41,10 @@ const ARButton = () => {
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
         setIsARSupported(!!modelViewer.canActivateAR);
-        console.log("AR supported:", !!modelViewer.canActivateAR);
+        // console.log("AR supported:", !!modelViewer.canActivateAR);
 
         if (arMode === "true" && isMobile && !hasAttemptedARActivation) {
-          console.log("Attempting to auto-activate AR from URL param");
+          // console.log("Attempting to auto-activate AR from URL param");
           setHasAttemptedARActivation(true); // Prevent multiple attempts
           setTimeout(() => {
             try {
@@ -53,7 +52,7 @@ const ARButton = () => {
                 console.warn("AR not supported on this device");
                 return;
               }
-              console.log("Triggering AR activation");
+              // console.log("Triggering AR activation");
 
               // Store the current URL to ensure we can return to it
               const currentUrl = window.location.href;
@@ -61,7 +60,7 @@ const ARButton = () => {
 
               // Add event listener for AR session end to handle return
               const handleARSessionEnd = () => {
-                console.log("AR session ended, ensuring browser remains open");
+                // console.log("AR session ended, ensuring browser remains open");
                 modelViewer.removeEventListener("ar-status", arStatusListener);
               };
 
@@ -82,7 +81,7 @@ const ARButton = () => {
             } catch (error) {
               console.error("Error auto-activating AR:", error);
             }
-          }, 10000); // Increased delay to ensure model-viewer is ready
+          }, 5000); // Increased delay to ensure model-viewer is ready
         }
       } else {
         console.warn("model-viewer element not found");
@@ -91,11 +90,11 @@ const ARButton = () => {
 
     const handleARStatus = (event) => {
       const status = event.detail.status;
-      console.log("AR Status Update:", status);
+      // console.log("AR Status Update:", status);
       if (status === "failed") {
         console.error("AR Failed:", event.detail);
       } else if (status === "session-started") {
-        console.log("AR Session Started");
+        // console.log("AR Session Started");
       } else if (status === "session-ended" || status === "not-presenting") {
         // Clear the AR mode parameter without reloading the page
         // This helps prevent issues if the user refreshes
@@ -146,7 +145,7 @@ const ARButton = () => {
       // On mobile, trigger AR view through model-viewer
       const modelViewer = document.querySelector("model-viewer");
       if (modelViewer) {
-        console.log("Activating AR via button click");
+        // console.log("Activating AR via button click");
         try {
           // Force a small delay before activating AR
           setTimeout(() => {

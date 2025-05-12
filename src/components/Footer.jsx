@@ -1,5 +1,3 @@
-// src/components/Footer.jsx
-
 const Footer = () => {
   return (
     <div className="w-full flex justify-center items-center mt-3">

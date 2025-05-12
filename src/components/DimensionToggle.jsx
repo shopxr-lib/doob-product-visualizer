@@ -1,4 +1,3 @@
-// src/components/DimensionToggle.jsx
 import { useState, useRef, useEffect } from "react";
 import { BsRulers } from "react-icons/bs";
 import { useProductContext } from "../context/ProductContext";

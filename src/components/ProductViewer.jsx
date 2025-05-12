@@ -220,7 +220,7 @@ const Model = ({ modelPath, showDimensions }) => {
   );
 };
 
-// Improved DimensionLine component for dimension lines
+// DimensionLine component for dimension lines
 const DimensionLine = ({ start, end, color, label }) => {
   const { camera } = useThree();
   const labelRef = useRef();
@@ -336,7 +336,7 @@ const ProductViewer = () => {
     useProductContext();
 
   const modelPath = getCurrentModelPath();
-  console.log("modelPath:", modelPath);
+  // console.log("modelPath:", modelPath);
 
   // Compute effectiveModelPath for both canvas and model-viewer
   const [effectiveModelPath, setEffectiveModelPath] = useState(modelPath);
@@ -354,11 +354,11 @@ const ProductViewer = () => {
     const modelId = urlParams.get("modelId");
 
     // Log the current state for debugging
-    console.log("Current application state:");
-    console.log("- Current model path:", modelPath);
-    console.log("- AR mode:", arMode === "true" ? "Yes" : "No");
-    console.log("- URL model param:", modelParam || "None");
-    console.log("- URL modelId:", modelId || "None");
+    // console.log("Current application state:");
+    // console.log("- Current model path:", modelPath);
+    // console.log("- AR mode:", arMode === "true" ? "Yes" : "No");
+    // console.log("- URL model param:", modelParam || "None");
+    // console.log("- URL modelId:", modelId || "None");
 
     // Use the model from URL parameter if available and we're in AR mode
     let computedEffectiveModelPath = modelPath;
@@ -367,10 +367,10 @@ const ProductViewer = () => {
         try {
           // Decode base64-encoded model path
           computedEffectiveModelPath = atob(decodeURIComponent(modelParam));
-          console.log(
-            "Using decoded model from URL parameter:",
-            computedEffectiveModelPath
-          );
+          // console.log(
+          //   "Using decoded model from URL parameter:",
+          //   computedEffectiveModelPath
+          // );
         } catch (error) {
           console.error("Error decoding model path:", error);
         }
@@ -379,10 +379,10 @@ const ProductViewer = () => {
         const storedModelPath = sessionStorage.getItem(`model_${modelId}`);
         if (storedModelPath) {
           computedEffectiveModelPath = storedModelPath;
-          console.log(
-            "Using model from session storage:",
-            computedEffectiveModelPath
-          );
+          // console.log(
+          //   "Using model from session storage:",
+          //   computedEffectiveModelPath
+          // );
         } else {
           console.warn(
             "No model path found in session storage for modelId:",
@@ -468,7 +468,7 @@ const ProductViewer = () => {
 
       // Set model paths
       modelViewerElement.src = fullModelPath;
-      console.log("Setting model-viewer src to:", fullModelPath);
+      // console.log("Setting model-viewer src to:", fullModelPath);
 
       // For iOS devices, we need USDZ
       if (isIOS()) {
@@ -483,12 +483,12 @@ const ProductViewer = () => {
         // Set the exact current URL as the return URL, preserving all parameters
         const returnUrl = window.location.href;
         modelViewerElement.setAttribute("link", returnUrl);
-        console.log("Setting scene-viewer return URL to:", returnUrl);
+        // console.log("Setting scene-viewer return URL to:", returnUrl);
       }
 
       // Add event listeners for AR sessions
       const handleARStatusChange = (event) => {
-        console.log("AR Status Change:", event.detail.status);
+        // console.log("AR Status Change:", event.detail.status);
 
         // When AR session ends, ensure we don't close the browser
         if (
@@ -496,7 +496,7 @@ const ProductViewer = () => {
           event.detail.status === "not-presenting"
         ) {
           // For QR-code initiated sessions, this helps prevent browser closing
-          console.log("AR session ended, ensuring browser stays open");
+          // console.log("AR session ended, ensuring browser stays open");
 
           // Remove AR mode from URL without reloading the page
           const urlParams = new URLSearchParams(window.location.search);
@@ -516,16 +516,16 @@ const ProductViewer = () => {
     }
 
     const handleARStatus = (event) => {
-      console.log("AR Status:", event.detail.status, "Details:", event.detail);
+      // console.log("AR Status:", event.detail.status, "Details:", event.detail);
       if (event.detail.status === "failed") {
         console.error("AR Failed:", event.detail);
       } else if (event.detail.status === "session-started") {
-        console.log("AR Session Started");
+        // console.log("AR Session Started");
       }
     };
 
     const handleLoad = () => {
-      console.log("Model loaded successfully in model-viewer");
+      // console.log("Model loaded successfully in model-viewer");
       // Clear URL parameters after model-viewer is loaded
       if (shouldClearURL) {
         // Don't clear URL immediately if in AR mode - we need to keep those params
