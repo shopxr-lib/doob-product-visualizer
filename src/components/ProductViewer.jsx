@@ -563,13 +563,13 @@ const ProductViewer = () => {
         className="w-full h-full"
       >
         {/* Environment light */}
-        <Environment preset="apartment" />
+        <Environment preset="city" />
 
         {/* Add some ambient and directional lighting */}
-        <ambientLight intensity={0.5} />
+        <ambientLight intensity={0} />
         <directionalLight
-          position={[10, 10, 5]}
-          intensity={1}
+          position={[10, 10, 20]}
+          intensity={0.2}
           castShadow
           shadow-mapSize={[1024, 1024]}
         />
