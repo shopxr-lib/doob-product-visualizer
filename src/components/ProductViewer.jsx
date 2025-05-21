@@ -574,6 +574,8 @@ const ProductViewer = () => {
           shadow-mapSize={[1024, 1024]}
         />
 
+        <directionalLight position={[-1, 0, 1.6]} intensity={1.5} />
+
         <Suspense fallback={null}>
           {/* The 3D model */}
           <ErrorBoundary>
