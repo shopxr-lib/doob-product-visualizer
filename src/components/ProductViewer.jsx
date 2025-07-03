@@ -7,6 +7,9 @@ import * as THREE from "three";
 import gsap from "gsap";
 import "@google/model-viewer";
 
+// To track model-viewer instances
+let modelViewerInstance = null;
+
 // FlatErrorText component to render flat 2D text
 const FlatErrorText = () => {
   const { camera } = useThree();
@@ -59,6 +62,41 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Enhanced cleanup utility
+const disposeObject = (obj) => {
+  if (!obj) return;
+
+  if (obj.geometry) {
+    obj.geometry.dispose();
+  }
+
+  if (obj.material) {
+    if (Array.isArray(obj.material)) {
+      obj.material.forEach((material) => {
+        if (material.map) material.map.dispose();
+        if (material.normalMap) material.normalMap.dispose();
+        if (material.roughnessMap) material.roughnessMap.dispose();
+        if (material.metalnessMap) material.metalnessMap.dispose();
+        if (material.aoMap) material.aoMap.dispose();
+        if (material.emissiveMap) material.emissiveMap.dispose();
+        material.dispose();
+      });
+    } else {
+      if (obj.material.map) obj.material.map.dispose();
+      if (obj.material.normalMap) obj.material.normalMap.dispose();
+      if (obj.material.roughnessMap) obj.material.roughnessMap.dispose();
+      if (obj.material.metalnessMap) obj.material.metalnessMap.dispose();
+      if (obj.material.aoMap) obj.material.aoMap.dispose();
+      if (obj.material.emissiveMap) obj.material.emissiveMap.dispose();
+      obj.material.dispose();
+    }
+  }
+
+  if (obj.children) {
+    obj.children.forEach((child) => disposeObject(child));
+  }
+};
+
 // Model component that handles the actual 3D model
 const Model = ({ modelPath, showDimensions }) => {
   const { scene: originalScene } = useGLTF(modelPath);
@@ -77,19 +115,10 @@ const Model = ({ modelPath, showDimensions }) => {
     const clone = originalScene.clone(true);
     let finalBox = new THREE.Box3();
 
-    // Dispose of previous model resources
+    // Enhanced cleanup of previous model
     if (modelRef.current && modelRef.current.children.length > 0) {
       modelRef.current.traverse((child) => {
-        if (child.isMesh) {
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach((mat) => mat.dispose());
-            } else {
-              child.material.dispose();
-            }
-          }
-        }
+        disposeObject(child);
       });
       modelRef.current.clear();
     }
@@ -113,42 +142,42 @@ const Model = ({ modelPath, showDimensions }) => {
       modelRef.current.scale.set(1, 1, 1);
 
       // Animate appearance (scale + rotation) on first load
-      if (firstLoadRef.current) {
-        gsap.fromTo(
-          modelRef.current.scale,
-          { x: 0, y: 0, z: 0 },
-          {
-            x: 1,
-            y: 1,
-            z: 1,
-            duration: 1.5,
-            ease: "back.out(1.7)",
-          }
-        );
+      // if (firstLoadRef.current) {
+      //   gsap.fromTo(
+      //     modelRef.current.scale,
+      //     { x: 0, y: 0, z: 0 },
+      //     {
+      //       x: 1,
+      //       y: 1,
+      //       z: 1,
+      //       duration: 1.5,
+      //       ease: "back.out(1.7)",
+      //     }
+      //   );
 
-        gsap.fromTo(
-          modelRef.current.rotation,
-          { y: Math.PI },
-          { y: 0, duration: 1.5, ease: "power2.out" }
-        );
+      //   gsap.fromTo(
+      //     modelRef.current.rotation,
+      //     { y: Math.PI },
+      //     { y: 0, duration: 1.5, ease: "power2.out" }
+      //   );
 
-        firstLoadRef.current = false;
-      } else {
-        // Only rotate the model when a new one is selected
-        gsap.fromTo(
-          modelRef.current.rotation,
-          { y: 0 },
-          {
-            y: Math.PI * -2,
-            duration: 1.2,
-            ease: "power1.out",
-            onComplete: () => {
-              // Face the front toward camera (reset Y)
-              modelRef.current.rotation.y = 0;
-            },
-          }
-        );
-      }
+      //   firstLoadRef.current = false;
+      // } else {
+      // Only rotate the model when a new one is selected
+      //   gsap.fromTo(
+      //     modelRef.current.rotation,
+      //     { y: 0 },
+      //     {
+      //       y: Math.PI * -2,
+      //       duration: 1.2,
+      //       ease: "power1.out",
+      //       onComplete: () => {
+      // Face the front toward camera (reset Y)
+      //         modelRef.current.rotation.y = 0;
+      //       },
+      //     }
+      //   );
+      // }
 
       // Wait a frame to let it attach to the scene
       requestAnimationFrame(() => {
@@ -165,20 +194,11 @@ const Model = ({ modelPath, showDimensions }) => {
       });
     }
 
-    // Cleanup on unmount or model change
+    // Enhanced cleanup function
     return () => {
       if (modelRef.current) {
         modelRef.current.traverse((child) => {
-          if (child.isMesh) {
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) {
-              if (Array.isArray(child.material)) {
-                child.material.forEach((mat) => mat.dispose());
-              } else {
-                child.material.dispose();
-              }
-            }
-          }
+          disposeObject(child);
         });
         modelRef.current.clear();
       }
@@ -440,144 +460,109 @@ const ProductViewer = () => {
   }, [modelPath, setIsLoading]);
 
   //* Add model-viewer element for AR
+  // FIXED: Better model-viewer management
   useEffect(() => {
-    //* Helper function to detect iOS device
     const isIOS = () => {
       const userAgent = navigator.userAgent || navigator.vendor || window.opera;
       return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
     };
 
-    //* Helper function to detect Android device
     const isAndroid = () => {
       const userAgent = navigator.userAgent || navigator.vendor || window.opera;
       return /Android/.test(userAgent);
     };
 
-    //* Create model-viewer element
-    let modelViewerElement = document.querySelector("model-viewer");
-    if (!modelViewerElement) {
-      modelViewerElement = document.createElement("model-viewer");
-      modelViewerElement.id = "ar-model-viewer";
-      document.body.appendChild(modelViewerElement);
-    }
-
-    // Track initialization state
-    const isInitialized = modelViewerElement.hasAttribute("data-initialized");
-    const currentSrc = modelViewerElement.getAttribute("src");
-
-    if (
-      !isInitialized ||
-      currentSrc !== `https://doob.shopxr.org${effectiveModelPath}`
-    ) {
-      // Always reset src and ios-src to ensure new model loads
-      modelViewerElement.removeAttribute("src");
-      modelViewerElement.removeAttribute("ios-src");
-
-      modelViewerElement.setAttribute("ar", "");
-      modelViewerElement.setAttribute(
-        "ar-modes",
-        "webxr scene-viewer quick-look"
+    // Clean up existing model-viewer before creating new one
+    if (modelViewerInstance && document.body.contains(modelViewerInstance)) {
+      // Remove all event listeners first
+      const clonedNode = modelViewerInstance.cloneNode(false);
+      modelViewerInstance.parentNode.replaceChild(
+        clonedNode,
+        modelViewerInstance
       );
-      modelViewerElement.setAttribute("ar-scale", "fixed");
-      modelViewerElement.setAttribute("camera-controls", "");
-      modelViewerElement.setAttribute("auto-rotate", "false");
-
-      // Attributes to help with AR initialization
-      modelViewerElement.setAttribute("seamless-poster", "");
-      modelViewerElement.setAttribute("shadow-intensity", "1");
-      modelViewerElement.setAttribute("environment-image", "neutral");
-      modelViewerElement.setAttribute("ar-placement", "floor");
-
-      // Make sure it's clickable but not visible
-      modelViewerElement.style.display = "block";
-      modelViewerElement.style.width = "1px";
-      modelViewerElement.style.height = "1px";
-      modelViewerElement.style.position = "absolute";
-      modelViewerElement.style.bottom = "0";
-      modelViewerElement.style.right = "0";
-      modelViewerElement.style.opacity = "0.01"; // Not fully invisible to ensure clickability
-      modelViewerElement.style.pointerEvents = "auto";
-
-      // Set the base URL for the model
-      const baseUrl = "https://doob.shopxr.org";
-      const fullModelPath = `${baseUrl}${effectiveModelPath}`;
-
-      // Set model paths
-      modelViewerElement.src = fullModelPath;
-      // console.log("Setting model-viewer src to:", fullModelPath);
-
-      // For iOS devices, we need USDZ
-      if (isIOS()) {
-        // Create the USDZ path
-        const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
-        const fullUsdzPath = `${baseUrl}${usdzPath}`;
-        // Check if USDZ file exists before setting ios-src
-        fetch(fullUsdzPath, { method: "HEAD" })
-          .then((response) => {
-            if (response.ok) {
-              modelViewerElement.setAttribute("ios-src", fullUsdzPath);
-            } else {
-              console.warn(`USDZ file not found: ${fullUsdzPath}`);
-            }
-          })
-          .catch((error) => {
-            console.error("Error checking USDZ file:", error);
-          });
-        // modelViewerElement.setAttribute("ios-src", fullUsdzPath);
-      }
-
-      // For Android devices, set a return URL for scene-viewer
-      if (isAndroid()) {
-        // Set the exact current URL as the return URL, preserving all parameters
-        const returnUrl = window.location.href;
-        modelViewerElement.setAttribute("link", returnUrl);
-        // console.log("Setting scene-viewer return URL to:", returnUrl);
-      }
-
-      // Add event listeners for AR sessions
-      const handleARStatusChange = (event) => {
-        // console.log("AR Status Change:", event.detail.status);
-
-        // When AR session ends, ensure we don't close the browser
-        if (
-          event.detail.status === "session-ended" ||
-          event.detail.status === "not-presenting"
-        ) {
-          // For QR-code initiated sessions, this helps prevent browser closing
-          // console.log("AR session ended, ensuring browser stays open");
-
-          // Remove AR mode from URL without reloading the page
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.has("ar")) {
-            urlParams.delete("ar");
-            const newUrl =
-              window.location.pathname +
-              (urlParams.toString() ? "?" + urlParams.toString() : "");
-            window.history.replaceState({}, document.title, newUrl);
-          }
-        }
-      };
-
-      modelViewerElement.addEventListener("ar-status", handleARStatusChange);
-
-      modelViewerElement.setAttribute("data-initialized", "true");
+      modelViewerInstance = null;
     }
+
+    // Create new model-viewer instance
+    modelViewerInstance = document.createElement("model-viewer");
+    modelViewerInstance.id = "ar-model-viewer";
+    document.body.appendChild(modelViewerInstance);
+
+    // Set up model-viewer attributes
+    modelViewerInstance.setAttribute("ar", "");
+    modelViewerInstance.setAttribute(
+      "ar-modes",
+      "webxr scene-viewer quick-look"
+    );
+    modelViewerInstance.setAttribute("ar-scale", "fixed");
+    modelViewerInstance.setAttribute("camera-controls", "");
+    modelViewerInstance.setAttribute("auto-rotate", "false");
+    modelViewerInstance.setAttribute("seamless-poster", "");
+    modelViewerInstance.setAttribute("shadow-intensity", "1");
+    modelViewerInstance.setAttribute("environment-image", "neutral");
+    modelViewerInstance.setAttribute("ar-placement", "floor");
+
+    // Style the model-viewer
+    modelViewerInstance.style.display = "block";
+    modelViewerInstance.style.width = "1px";
+    modelViewerInstance.style.height = "1px";
+    modelViewerInstance.style.position = "absolute";
+    modelViewerInstance.style.bottom = "0";
+    modelViewerInstance.style.right = "0";
+    modelViewerInstance.style.opacity = "0.01";
+    modelViewerInstance.style.pointerEvents = "auto";
+
+    // Set model paths
+    const baseUrl = "https://doob.shopxr.org";
+    const fullModelPath = `${baseUrl}${effectiveModelPath}`;
+    modelViewerInstance.src = fullModelPath;
+
+    // Handle iOS USDZ
+    if (isIOS()) {
+      const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
+      const fullUsdzPath = `${baseUrl}${usdzPath}`;
+      fetch(fullUsdzPath, { method: "HEAD" })
+        .then((response) => {
+          if (response.ok) {
+            modelViewerInstance.setAttribute("ios-src", fullUsdzPath);
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking USDZ file:", error);
+        });
+    }
+
+    // Handle Android return URL
+    if (isAndroid()) {
+      const returnUrl = window.location.href;
+      modelViewerInstance.setAttribute("link", returnUrl);
+    }
+
+    // Event listeners
+    const handleARStatusChange = (event) => {
+      if (
+        event.detail.status === "session-ended" ||
+        event.detail.status === "not-presenting"
+      ) {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has("ar")) {
+          urlParams.delete("ar");
+          const newUrl =
+            window.location.pathname +
+            (urlParams.toString() ? "?" + urlParams.toString() : "");
+          window.history.replaceState({}, document.title, newUrl);
+        }
+      }
+    };
 
     const handleARStatus = (event) => {
-      // console.log("AR Status:", event.detail.status, "Details:", event.detail);
       if (event.detail.status === "failed") {
         console.error("AR Failed:", event.detail);
-      } else if (event.detail.status === "session-started") {
-        // console.log("AR Session Started");
       }
     };
 
     const handleLoad = () => {
-      // console.log("Model loaded successfully in model-viewer");
-      // Clear URL parameters after model-viewer is loaded
       if (shouldClearURL) {
-        // Don't clear URL immediately if in AR mode - we need to keep those params
-        // until AR session is complete
         const urlParams = new URLSearchParams(window.location.search);
         if (!urlParams.get("ar")) {
           const newUrl = `${window.location.pathname}`;
@@ -592,17 +577,21 @@ const ProductViewer = () => {
     };
 
     // Add event listeners
-    modelViewerElement.addEventListener("ar-status", handleARStatus);
-    modelViewerElement.addEventListener("load", handleLoad);
-    modelViewerElement.addEventListener("error", handleError);
+    modelViewerInstance.addEventListener("ar-status", handleARStatusChange);
+    modelViewerInstance.addEventListener("ar-status", handleARStatus);
+    modelViewerInstance.addEventListener("load", handleLoad);
+    modelViewerInstance.addEventListener("error", handleError);
 
+    // Cleanup function
     return () => {
-      modelViewerElement.removeEventListener("ar-status", handleARStatus);
-      modelViewerElement.removeEventListener("load", handleLoad);
-      modelViewerElement.removeEventListener("error", handleError);
-      modelViewerElement.removeEventListener("error", handleError);
-      if (document.body.contains(modelViewerElement)) {
-        document.body.removeChild(modelViewerElement);
+      if (modelViewerInstance && document.body.contains(modelViewerInstance)) {
+        // Remove event listeners by replacing with clone
+        const clonedNode = modelViewerInstance.cloneNode(false);
+        modelViewerInstance.parentNode.replaceChild(
+          clonedNode,
+          modelViewerInstance
+        );
+        modelViewerInstance = null;
       }
     };
   }, [effectiveModelPath, shouldClearURL]);
@@ -622,7 +611,7 @@ const ProductViewer = () => {
         <directionalLight
           position={[10, 10, 20]}
           intensity={0.2}
-          // castShadow
+          castShadow
           shadow-mapSize={[1024, 1024]}
         />
 

@@ -30,3 +30,8 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+canvas {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
