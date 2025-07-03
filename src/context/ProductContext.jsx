@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import productsData from "../data/productsData";
+import { debounce } from "lodash";
 
 //* Creating Context
 const ProductContext = createContext();
@@ -87,9 +88,16 @@ export const ProductProvider = ({ children, initialProduct = "plop" }) => {
   };
 
   //* Function to update color
-  const updateColor = (color) => {
+  const updateColor = debounce((color) => {
     setSelectedColor(color);
-  };
+  }, 300);
+
+  // Ensure the debounced function is cleaned up
+  useEffect(() => {
+    return () => {
+      updateColor.cancel();
+    };
+  }, []);
 
   useEffect(() => {
     setShowDimensions(false);

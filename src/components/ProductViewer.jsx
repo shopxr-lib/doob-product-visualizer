@@ -77,6 +77,23 @@ const Model = ({ modelPath, showDimensions }) => {
     const clone = originalScene.clone(true);
     let finalBox = new THREE.Box3();
 
+    // Dispose of previous model resources
+    if (modelRef.current && modelRef.current.children.length > 0) {
+      modelRef.current.traverse((child) => {
+        if (child.isMesh) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((mat) => mat.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        }
+      });
+      modelRef.current.clear();
+    }
+
     clone.traverse((child) => {
       if (child.isMesh && child.visible) {
         child.geometry.computeBoundingBox();
@@ -147,7 +164,26 @@ const Model = ({ modelPath, showDimensions }) => {
         setModelDimensions(dimensionsInCm);
       });
     }
-  }, [originalScene]);
+
+    // Cleanup on unmount or model change
+    return () => {
+      if (modelRef.current) {
+        modelRef.current.traverse((child) => {
+          if (child.isMesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+        modelRef.current.clear();
+      }
+    };
+  }, [originalScene, setIsLoading]);
 
   // Convert cm to inches
   const convertToInches = (cm) => {
@@ -475,7 +511,19 @@ const ProductViewer = () => {
         // Create the USDZ path
         const usdzPath = effectiveModelPath.replace(".glb", ".usdz");
         const fullUsdzPath = `${baseUrl}${usdzPath}`;
-        modelViewerElement.setAttribute("ios-src", fullUsdzPath);
+        // Check if USDZ file exists before setting ios-src
+        fetch(fullUsdzPath, { method: "HEAD" })
+          .then((response) => {
+            if (response.ok) {
+              modelViewerElement.setAttribute("ios-src", fullUsdzPath);
+            } else {
+              console.warn(`USDZ file not found: ${fullUsdzPath}`);
+            }
+          })
+          .catch((error) => {
+            console.error("Error checking USDZ file:", error);
+          });
+        // modelViewerElement.setAttribute("ios-src", fullUsdzPath);
       }
 
       // For Android devices, set a return URL for scene-viewer
@@ -552,6 +600,10 @@ const ProductViewer = () => {
       modelViewerElement.removeEventListener("ar-status", handleARStatus);
       modelViewerElement.removeEventListener("load", handleLoad);
       modelViewerElement.removeEventListener("error", handleError);
+      modelViewerElement.removeEventListener("error", handleError);
+      if (document.body.contains(modelViewerElement)) {
+        document.body.removeChild(modelViewerElement);
+      }
     };
   }, [effectiveModelPath, shouldClearURL]);
 
@@ -570,7 +622,7 @@ const ProductViewer = () => {
         <directionalLight
           position={[10, 10, 20]}
           intensity={0.2}
-          castShadow
+          // castShadow
           shadow-mapSize={[1024, 1024]}
         />
 
